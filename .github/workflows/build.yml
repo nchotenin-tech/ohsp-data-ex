@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    permissions:
+      contents: write          # จำเป็นสำหรับการสร้าง Release และแนบไฟล์
     steps:
       - uses: actions/checkout@v4
 
