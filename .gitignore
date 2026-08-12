@@ -1,0 +1,27 @@
+# ---- ข้อมูลจริงของพื้นที่ ห้าม push ขึ้น GitHub เด็ดขาด ----
+data/
+ผลลัพธ์/
+*.xlsx
+*.xls
+combined.csv
+summary.json
+meta.json
+log.txt
+
+# ---- ไฟล์ที่เกิดจากการ build ----
+build/
+dist/
+*.spec
+__pycache__/
+*.pyc
+package/
+*.zip
+
+# ---- ไฟล์ชั่วคราวของ Office / ระบบปฏิบัติการ ----
+~$*
+.DS_Store
+Thumbs.db
+
+# ---- ยกเว้น: ไฟล์อ้างอิงที่ต้องอยู่ใน repo ----
+!src/hospitals.csv
+!sample-data/**/*.xlsx

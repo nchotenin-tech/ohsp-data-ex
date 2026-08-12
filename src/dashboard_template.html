@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard สภาวะช่องปาก</title>
+<style>
+:root{
+  --bg:#f4f6f8; --card:#fff; --line:#e2e8f0; --text:#1e293b; --muted:#64748b;
+  --primary:#0f766e; --primary-l:#ccfbf1; --accent:#b45309; --danger:#be123c;
+  --b0:#0f766e; --b1:#0891b2; --b2:#ca8a04; --b3:#be123c; --b9:#94a3b8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:"Sarabun","Leelawadee UI","Tahoma",system-ui,sans-serif;font-size:15px;line-height:1.5}
+header{background:var(--primary);color:#fff;padding:18px 24px}
+header h1{margin:0;font-size:21px;font-weight:700}
+header p{margin:4px 0 0;font-size:13px;opacity:.85}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 24px 60px}
+.filters{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;
+  background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:18px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:12px;color:var(--muted);font-weight:600}
+select{padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;
+  font-family:inherit;font-size:14px;min-width:200px;color:var(--text)}
+button{padding:7px 14px;border:1px solid var(--line);border-radius:7px;background:#fff;
+  font-family:inherit;font-size:14px;cursor:pointer;color:var(--text)}
+button:hover{background:#f1f5f9}
+button.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+button.primary:hover{opacity:.9}
+.scope{margin-left:auto;font-size:13px;color:var(--muted);text-align:right}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:22px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.kpi .lab{font-size:12px;color:var(--muted);font-weight:600}
+.kpi .val{font-size:26px;font-weight:700;margin-top:2px;color:var(--primary)}
+.kpi .sub{font-size:12px;color:var(--muted)}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:18px}
+section h2{margin:0 0 4px;font-size:16px;font-weight:700}
+section .note{margin:0 0 12px;font-size:12.5px;color:var(--muted)}
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:center;white-space:nowrap}
+thead th{background:#f1f5f9;font-weight:700;font-size:13px}
+tbody th{background:#f8fafc;font-weight:700}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.pct{text-align:right;font-variant-numeric:tabular-nums;color:var(--primary);font-weight:600}
+tr.empty td{color:var(--muted);font-style:italic}
+.bar{position:relative;height:9px;background:#e2e8f0;border-radius:5px;overflow:hidden;min-width:70px}
+.bar>i{position:absolute;inset:0 auto 0 0;background:var(--primary);border-radius:5px}
+.chart{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+.crow{display:grid;grid-template-columns:60px 1fr 62px;gap:10px;align-items:center;font-size:13px}
+.crow .track{height:16px;background:#eef2f6;border-radius:4px;display:flex;overflow:hidden}
+.crow .track span{height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:12.5px;color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.dq{font-size:13px;color:var(--muted);margin-top:10px}
+footer{text-align:center;font-size:12px;color:var(--muted);padding:10px}
+@media print{header{background:#fff;color:#000}button,.filters{display:none}section{break-inside:avoid}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Dashboard ผลการสำรวจสภาวะช่องปาก</h1>
+  <p id="subtitle">กลุ่มอายุ 3, 6, 12 ปี และ 60 ปีขึ้นไป — ข้อมูลจาก HDC Data Exchange</p>
+</header>
+
+<div class="wrap">
+  <div class="filters">
+    <div class="field">
+      <label for="fAmp">อำเภอ</label>
+      <select id="fAmp"></select>
+    </div>
+    <div class="field">
+      <label for="fHos">หน่วยบริการ</label>
+      <select id="fHos"></select>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button id="btnReset">ล้างตัวกรอง</button>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button id="btnCsv" class="primary">ดาวน์โหลดตารางทั้งหมด (CSV)</button>
+    </div>
+    <div class="scope" id="scope"></div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section>
+    <h2>ตารางที่ 1 คุณภาพของข้อมูลการตรวจ แยกรายกลุ่มอายุ</h2>
+    <p class="note">จำนวนที่ตรวจ = มีวันที่ให้บริการ · ผ่านเกณฑ์คุณภาพ = ผู้ตรวจเป็นทันตแพทย์/ทันตาภิบาล (02, 06) และค่าจำนวนฟันอยู่ในพิสัยที่กำหนด</p>
+    <div class="tblwrap"><table id="t1"></table></div>
+    <div class="dq" id="dq1"></div>
+  </section>
+
+  <section>
+    <h2>ตารางที่ 2 ร้อยละของผู้ปราศจากโรคฟันผุและมีประสบการณ์ฟันผุ</h2>
+    <p class="note">อายุ 3 ปี นับฟันน้ำนม · อายุ 6, 12, 60+ นับฟันแท้ · ฐาน = ผู้ผ่านเกณฑ์คุณภาพ</p>
+    <div class="tblwrap"><table id="t2"></table></div>
+    <div class="chart" id="c2"></div>
+  </section>
+
+  <section>
+    <h2>ตารางที่ 3 ค่าเฉลี่ยฟันผุ ถอน อุด (ซี่ต่อคน)</h2>
+    <p class="note">ฐาน = ผู้ผ่านเกณฑ์คุณภาพ</p>
+    <div class="tblwrap"><table id="t3"></table></div>
+  </section>
+
+  <section>
+    <h2>ตารางที่ 4 ร้อยละของผู้มีภาวะเหงือกอักเสบและสภาวะปริทันต์</h2>
+    <p class="note">เฉพาะอายุ 12 และ 60+ · GumStatus = ค่าสูงสุดของ sextant ที่ตรวจได้ (0–3), เป็น 9 เมื่อตรวจไม่ได้ทั้งปาก · รหัส 4 และ 5 นับเป็น 3</p>
+    <div class="tblwrap"><table id="t4"></table></div>
+    <div class="chart" id="c4"></div>
+    <div class="legend">
+      <span><i style="background:var(--b0)"></i>ปกติ</span>
+      <span><i style="background:var(--b1)"></i>เลือดออก</span>
+      <span><i style="background:var(--b2)"></i>เหงือกอักเสบ</span>
+      <span><i style="background:var(--b3)"></i>ปริทันต์</span>
+      <span><i style="background:var(--b9)"></i>ตรวจไม่ได้</span>
+    </div>
+    <div class="dq" id="dq4"></div>
+  </section>
+
+  <section>
+    <h2>ตารางที่ 5 ค่าเฉลี่ยจำนวน sextant ในแต่ละสภาวะ (จาก 6 sextant ต่อคน)</h2>
+    <p class="note">เฉพาะอายุ 12 และ 60+ · ฐาน = ผู้ผ่านเกณฑ์คุณภาพที่มีค่า gum ใช้ได้</p>
+    <div class="tblwrap"><table id="t5"></table></div>
+  </section>
+
+  <section>
+    <h2>ตารางที่ 6 ผู้สูงอายุที่มีฟันใช้งาน 20 ซี่ และคู่สบฟันหลัง 4 คู่ขึ้นไป</h2>
+    <p class="note">เฉพาะอายุ 60+ · ฟันใช้งาน = pteeth ≥ 20 · คู่สบ = ผลรวมคู่สบฟันแท้/ฟันเทียม ≥ 4</p>
+    <div class="tblwrap"><table id="t6"></table></div>
+  </section>
+
+  <section>
+    <h2>ตารางที่ 7 ความจำเป็นในการรักษา</h2>
+    <p class="note">ฐาน = ผู้ผ่านเกณฑ์คุณภาพ · อุดฟัน/ถอนฟัน อายุ 3 ปีใช้ฟันน้ำนม อายุอื่นใช้ฟันแท้</p>
+    <div class="tblwrap"><table id="t7"></table></div>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+
+/* ---------- utilities ---------- */
+const $ = id => document.getElementById(id);
+const fmt = n => (n == null ? '-' : Number(n).toLocaleString('th-TH'));
+const pct = (a, b) => (!b ? '-' : (a / b * 100).toFixed(1));
+const avg = (a, b) => (!b ? '-' : (a / b).toFixed(2));
+const FIELDS = ['total','examined','examinedOther','quality','cariesFree','cariesUntreated','extracted','filled','dmftAny',
+  'sumTeeth','sumCaries','sumExtract','sumFilling','gumN','gum0','gum1','gum2','gum3','gum9','gumBad',
+  'sxt0','sxt1','sxt2','sxt3','sxt9','func20','occl4','func20occl4',
+  'needFluoride','needSealant','needFilling','needExtract','needScaling','failProvider','failRange'];
+
+const UNIT = {};
+DATA.units.forEach(u => UNIT[u.hoscode] = u);
+const AMPS = [...new Set(DATA.units.map(u => u.ampname))].sort((a, b) => a.localeCompare(b, 'th'));
+
+/* ---------- filters ---------- */
+function fillAmp() {
+  $('fAmp').innerHTML = '<option value="">ทุกอำเภอ (ทั้งจังหวัด)</option>' +
+    AMPS.map(a => `<option value="${a}">${a}</option>`).join('');
+}
+function fillHos() {
+  const amp = $('fAmp').value;
+  const list = DATA.units
+    .filter(u => !amp || u.ampname === amp)
+    .sort((a, b) => a.hosname.localeCompare(b.hosname, 'th'));
+  $('fHos').innerHTML = '<option value="">ทุกหน่วยบริการ</option>' +
+    list.map(u => `<option value="${u.hoscode}">${u.hoscode} ${u.hosname}</option>`).join('');
+}
+
+function currentCodes() {
+  const amp = $('fAmp').value, hos = $('fHos').value;
+  if (hos) return new Set([hos]);
+  return new Set(DATA.units.filter(u => !amp || u.ampname === amp).map(u => u.hoscode));
+}
+
+function aggregate() {
+  const codes = currentCodes();
+  const out = {};
+  DATA.ageOrder.forEach(a => { out[a] = {}; FIELDS.forEach(f => out[a][f] = 0); });
+  DATA.records.forEach(r => {
+    if (!codes.has(r.hoscode)) return;
+    const t = out[r.age];
+    if (!t) return;
+    FIELDS.forEach(f => t[f] += (r[f] || 0));
+  });
+  return out;
+}
+
+/* ---------- table builders ---------- */
+function head(rows) {
+  return '<thead>' + rows.map(r => '<tr>' + r.map(c => {
+    const [txt, cs, rs] = Array.isArray(c) ? c : [c, 1, 1];
+    return `<th${cs > 1 ? ` colspan="${cs}"` : ''}${rs > 1 ? ` rowspan="${rs}"` : ''}>${txt}</th>`;
+  }).join('') + '</tr>').join('') + '</thead>';
+}
+function cell(v, cls) { return `<td class="${cls || ''}">${v}</td>`; }
+function cnp(n, d) { return cell(fmt(n), 'num') + cell(pct(n, d), 'pct'); }
+
+function ages(list) { return (list || DATA.ageOrder); }
+
+function render() {
+  const A = aggregate();
+  const codes = currentCodes();
+  const amp = $('fAmp').value, hos = $('fHos').value;
+  $('scope').innerHTML = (hos ? `${UNIT[hos].hosname}<br>อ.${UNIT[hos].ampname}`
+      : amp ? `อำเภอ${amp} · ${codes.size} หน่วยบริการ`
+      : `ทั้งจังหวัด · ${codes.size} หน่วยบริการ`);
+
+  const tot = k => DATA.ageOrder.reduce((s, a) => s + A[a][k], 0);
+
+  /* KPI - การ์ดแยกตามกลุ่มอายุ */
+  $('kpis').innerHTML = DATA.ageOrder.map(a => {
+    const t = A[a], p = t.total ? t.examined / t.total * 100 : 0;
+    return `<div class="kpi">
+      <div class="lab">อายุ ${DATA.ageLabel[a]} ปี</div>
+      <div class="val">${pct(t.examined, t.total)}%</div>
+      <div class="sub">ตรวจฟัน <b>${fmt(t.examined)}</b> คน</div>
+      <div class="bar" style="margin:8px 0 6px"><i style="width:${p}%"></i></div>
+      <div class="sub">ประชากรทั้งหมด ${fmt(t.total)} record</div>
+    </div>`;
+  }).join('') +
+  `<div class="kpi">
+      <div class="lab">รวมทุกกลุ่มอายุ</div>
+      <div class="val">${pct(tot('examined'), tot('total'))}%</div>
+      <div class="sub">ตรวจฟัน <b>${fmt(tot('examined'))}</b> คน</div>
+      <div class="bar" style="margin:8px 0 6px"><i style="width:${tot('total') ? tot('examined') / tot('total') * 100 : 0}%"></i></div>
+      <div class="sub">ประชากรทั้งหมด ${fmt(tot('total'))} record</div>
+   </div>`;
+
+  /* ตารางที่ 1 */
+  $('t1').innerHTML = head([['อายุ', 'จำนวนที่ตรวจ', 'จำนวนที่ผ่านเกณฑ์คุณภาพ', 'ร้อยละ', 'สัดส่วน']]) +
+    '<tbody>' + DATA.ageOrder.map(a => {
+      const t = A[a];
+      return `<tr><th>${DATA.ageLabel[a]}</th>` + cell(fmt(t.examined), 'num') + cnp(t.quality, t.examined) +
+        `<td><div class="bar"><i style="width:${t.examined ? t.quality / t.examined * 100 : 0}%"></i></div></td></tr>`;
+    }).join('') +
+    `<tr><th>รวม</th>${cell(fmt(tot('examined')), 'num')}${cnp(tot('quality'), tot('examined'))}<td></td></tr>` +
+    '</tbody>';
+  $('dq1').textContent = `ไม่ผ่านเกณฑ์เพราะผู้ตรวจไม่ใช่ทันตแพทย์/ทันตาภิบาล ${fmt(tot('failProvider'))} คน · ` +
+    `เพราะจำนวนฟันอยู่นอกพิสัยที่กำหนด ${fmt(tot('failRange'))} คน · ` +
+    `ไม่นับเพราะตรวจนอกปีงบประมาณ ${fmt(tot('examinedOther'))} รายการ`;
+
+  /* ตารางที่ 2 */
+  $('t2').innerHTML = head([
+    [['อายุ', 1, 2], ['ปราศจากฟันผุ', 2], ['ฟันผุไม่ได้รักษา', 2], ['ฟันถอน', 2], ['ฟันอุด', 2], ['ฟันผุถอนอุด', 2]],
+    ['จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ']]) +
+    '<tbody>' + DATA.ageOrder.map(a => {
+      const t = A[a], n = t.quality;
+      return `<tr><th>${DATA.ageLabel[a]}</th>` +
+        cnp(t.cariesFree, n) + cnp(t.cariesUntreated, n) + cnp(t.extracted, n) +
+        cnp(t.filled, n) + cnp(t.dmftAny, n) + '</tr>';
+    }).join('') + '</tbody>';
+
+  $('c2').innerHTML = '<div style="font-size:13px;color:var(--muted)">ร้อยละปราศจากฟันผุ</div>' +
+    DATA.ageOrder.map(a => {
+      const t = A[a], p = t.quality ? t.cariesFree / t.quality * 100 : 0;
+      return `<div class="crow"><span>${DATA.ageLabel[a]} ปี</span>
+        <div class="track"><span style="width:${p}%;background:var(--b0)"></span></div>
+        <span style="text-align:right">${pct(t.cariesFree, t.quality)}%</span></div>`;
+    }).join('');
+
+  /* ตารางที่ 3 */
+  $('t3').innerHTML = head([['อายุ', 'ฟันที่มีในปาก', 'ฟันผุ', 'ฟันถอน', 'ฟันอุด', 'ฟันผุถอนอุด']]) +
+    '<tbody>' + DATA.ageOrder.map(a => {
+      const t = A[a], n = t.quality;
+      return `<tr><th>${DATA.ageLabel[a]}</th>` +
+        cell(avg(t.sumTeeth, n), 'num') + cell(avg(t.sumCaries, n), 'num') +
+        cell(avg(t.sumExtract, n), 'num') + cell(avg(t.sumFilling, n), 'num') +
+        cell(avg(t.sumCaries + t.sumExtract + t.sumFilling, n), 'num') + '</tr>';
+    }).join('') + '</tbody>';
+
+  /* ตารางที่ 4 */
+  const gAges = ['12ปี', '60ปี'];
+  $('t4').innerHTML = head([
+    [['อายุ', 1, 2], ['ปกติ', 2], ['เลือดออก', 2], ['เหงือกอักเสบ', 2], ['ปริทันต์', 2], ['ตรวจไม่ได้', 2], ['รวม', 1, 2]],
+    ['จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ']]) +
+    '<tbody>' + gAges.map(a => {
+      const t = A[a], n = t.gumN;
+      return `<tr><th>${DATA.ageLabel[a]}</th>` +
+        cnp(t.gum0, n) + cnp(t.gum1, n) + cnp(t.gum2, n) + cnp(t.gum3, n) + cnp(t.gum9, n) +
+        cell(fmt(n), 'num') + '</tr>';
+    }).join('') + '</tbody>';
+
+  $('c4').innerHTML = gAges.map(a => {
+    const t = A[a], n = t.gumN || 1;
+    const seg = [['gum0', 'b0'], ['gum1', 'b1'], ['gum2', 'b2'], ['gum3', 'b3'], ['gum9', 'b9']]
+      .map(([k, c]) => `<span style="width:${t[k] / n * 100}%;background:var(--${c})" title="${k}: ${fmt(t[k])}"></span>`).join('');
+    return `<div class="crow"><span>${DATA.ageLabel[a]} ปี</span><div class="track">${seg}</div>
+      <span style="text-align:right">${fmt(t.gumN)}</span></div>`;
+  }).join('');
+  $('dq4').textContent = 'ค่า gum ที่ใช้ไม่ได้ (ว่าง/รูปแบบไม่ถูกต้อง): ' +
+    gAges.map(a => `อายุ ${DATA.ageLabel[a]} = ${fmt(A[a].gumBad)} คน`).join(' · ');
+
+  /* ตารางที่ 5 */
+  $('t5').innerHTML = head([['อายุ', 'ปกติ', 'เลือดออก', 'เหงือกอักเสบ', 'ปริทันต์', 'ตรวจไม่ได้', 'จำนวนคน']]) +
+    '<tbody>' + gAges.map(a => {
+      const t = A[a], n = t.gumN;
+      return `<tr><th>${DATA.ageLabel[a]}</th>` +
+        cell(avg(t.sxt0, n), 'num') + cell(avg(t.sxt1, n), 'num') + cell(avg(t.sxt2, n), 'num') +
+        cell(avg(t.sxt3, n), 'num') + cell(avg(t.sxt9, n), 'num') + cell(fmt(n), 'num') + '</tr>';
+    }).join('') + '</tbody>';
+
+  /* ตารางที่ 6 */
+  const s = A['60ปี'];
+  $('t6').innerHTML = head([
+    [['อายุ', 1, 2], ['ฟันใช้งาน 20 ซี่', 2], ['คู่สบฟันหลัง 4 คู่ขึ้นไป', 2], ['ทั้งสองเงื่อนไข', 2], ['ฐาน (คน)', 1, 2]],
+    ['จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ']]) +
+    '<tbody><tr><th>60+</th>' + cnp(s.func20, s.quality) + cnp(s.occl4, s.quality) +
+    cnp(s.func20occl4, s.quality) + cell(fmt(s.quality), 'num') + '</tr></tbody>';
+
+  /* ตารางที่ 7 */
+  $('t7').innerHTML = head([
+    [['อายุ', 1, 2], ['ทาฟลูออไรด์', 2], ['เคลือบหลุมร่องฟัน', 2], ['อุดฟัน', 2], ['ถอนฟัน/รักษารากฟัน', 2], ['ขูดหินปูน', 2]],
+    ['จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ']]) +
+    '<tbody>' + DATA.ageOrder.map(a => {
+      const t = A[a], n = t.quality;
+      return `<tr><th>${DATA.ageLabel[a]}</th>` +
+        cnp(t.needFluoride, n) + cnp(t.needSealant, n) + cnp(t.needFilling, n) +
+        cnp(t.needExtract, n) + cnp(t.needScaling, n) + '</tr>';
+    }).join('') + '</tbody>';
+}
+
+/* ---------- CSV export ---------- */
+function exportCsv() {
+  const A = aggregate();
+  const rows = [];
+  const scope = $('fHos').value ? UNIT[$('fHos').value].hosname
+    : $('fAmp').value ? 'อำเภอ' + $('fAmp').value : 'ทั้งจังหวัด';
+  rows.push(['ขอบเขต', scope]);
+  rows.push(['ปีงบประมาณ', DATA.fiscalYear, DATA.fyStart + ' ถึง ' + DATA.fyEnd]);
+  rows.push(['วันที่สร้างรายงาน', DATA.generatedAt]);
+  rows.push([]);
+
+  rows.push(['ตารางที่ 1 คุณภาพของข้อมูลการตรวจ']);
+  rows.push(['อายุ', 'ประชากรทั้งหมด', 'จำนวนที่ตรวจ', 'ร้อยละที่ตรวจ', 'ผ่านเกณฑ์คุณภาพ', 'ร้อยละ']);
+  DATA.ageOrder.forEach(a => rows.push([DATA.ageLabel[a], A[a].total, A[a].examined,
+    pct(A[a].examined, A[a].total), A[a].quality, pct(A[a].quality, A[a].examined)]));
+  rows.push([]);
+
+  rows.push(['ตารางที่ 2 ร้อยละผู้ปราศจากฟันผุและมีประสบการณ์ฟันผุ']);
+  rows.push(['อายุ', 'ปราศจากฟันผุ', 'ร้อยละ', 'ฟันผุไม่ได้รักษา', 'ร้อยละ', 'ฟันถอน', 'ร้อยละ', 'ฟันอุด', 'ร้อยละ', 'ฟันผุถอนอุด', 'ร้อยละ']);
+  DATA.ageOrder.forEach(a => { const t = A[a], n = t.quality;
+    rows.push([DATA.ageLabel[a], t.cariesFree, pct(t.cariesFree, n), t.cariesUntreated, pct(t.cariesUntreated, n),
+      t.extracted, pct(t.extracted, n), t.filled, pct(t.filled, n), t.dmftAny, pct(t.dmftAny, n)]); });
+  rows.push([]);
+
+  rows.push(['ตารางที่ 3 ค่าเฉลี่ยฟันผุถอนอุด (ซี่ต่อคน)']);
+  rows.push(['อายุ', 'ฟันที่มีในปาก', 'ฟันผุ', 'ฟันถอน', 'ฟันอุด', 'ฟันผุถอนอุด']);
+  DATA.ageOrder.forEach(a => { const t = A[a], n = t.quality;
+    rows.push([DATA.ageLabel[a], avg(t.sumTeeth, n), avg(t.sumCaries, n), avg(t.sumExtract, n),
+      avg(t.sumFilling, n), avg(t.sumCaries + t.sumExtract + t.sumFilling, n)]); });
+  rows.push([]);
+
+  rows.push(['ตารางที่ 4 ร้อยละสภาวะปริทันต์']);
+  rows.push(['อายุ', 'ปกติ', 'ร้อยละ', 'เลือดออก', 'ร้อยละ', 'เหงือกอักเสบ', 'ร้อยละ', 'ปริทันต์', 'ร้อยละ', 'ตรวจไม่ได้', 'ร้อยละ', 'ฐาน']);
+  ['12ปี', '60ปี'].forEach(a => { const t = A[a], n = t.gumN;
+    rows.push([DATA.ageLabel[a], t.gum0, pct(t.gum0, n), t.gum1, pct(t.gum1, n), t.gum2, pct(t.gum2, n),
+      t.gum3, pct(t.gum3, n), t.gum9, pct(t.gum9, n), n]); });
+  rows.push([]);
+
+  rows.push(['ตารางที่ 5 ค่าเฉลี่ยจำนวน sextant']);
+  rows.push(['อายุ', 'ปกติ', 'เลือดออก', 'เหงือกอักเสบ', 'ปริทันต์', 'ตรวจไม่ได้', 'ฐาน']);
+  ['12ปี', '60ปี'].forEach(a => { const t = A[a], n = t.gumN;
+    rows.push([DATA.ageLabel[a], avg(t.sxt0, n), avg(t.sxt1, n), avg(t.sxt2, n), avg(t.sxt3, n), avg(t.sxt9, n), n]); });
+  rows.push([]);
+
+  const s = A['60ปี'];
+  rows.push(['ตารางที่ 6 ผู้สูงอายุฟันใช้งาน 20 ซี่ / คู่สบ 4 คู่']);
+  rows.push(['อายุ', 'ฟันใช้งาน 20 ซี่', 'ร้อยละ', 'คู่สบ 4 คู่ขึ้นไป', 'ร้อยละ', 'ทั้งสองเงื่อนไข', 'ร้อยละ', 'ฐาน']);
+  rows.push(['60+', s.func20, pct(s.func20, s.quality), s.occl4, pct(s.occl4, s.quality),
+    s.func20occl4, pct(s.func20occl4, s.quality), s.quality]);
+  rows.push([]);
+
+  rows.push(['ตารางที่ 7 ความจำเป็นในการรักษา']);
+  rows.push(['อายุ', 'ทาฟลูออไรด์', 'ร้อยละ', 'เคลือบหลุมร่องฟัน', 'ร้อยละ', 'อุดฟัน', 'ร้อยละ', 'ถอนฟัน/รักษาราก', 'ร้อยละ', 'ขูดหินปูน', 'ร้อยละ']);
+  DATA.ageOrder.forEach(a => { const t = A[a], n = t.quality;
+    rows.push([DATA.ageLabel[a], t.needFluoride, pct(t.needFluoride, n), t.needSealant, pct(t.needSealant, n),
+      t.needFilling, pct(t.needFilling, n), t.needExtract, pct(t.needExtract, n), t.needScaling, pct(t.needScaling, n)]); });
+
+  const csv = '﻿' + rows.map(r => r.map(c => {
+    const v = (c == null ? '' : String(c));
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'รายงานสภาวะช่องปาก_' + scope + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---------- init ---------- */
+fillAmp();
+fillHos();
+$('fAmp').onchange = () => { fillHos(); render(); };
+$('fHos').onchange = render;
+$('btnReset').onclick = () => { $('fAmp').value = ''; fillHos(); render(); };
+$('btnCsv').onclick = exportCsv;
+const beDate = s => { const [y, m, d] = s.split('-'); return `${d}/${m}/${+y + 543}`; };
+$('subtitle').textContent =
+  `กลุ่มอายุ 3, 6, 12 ปี และ 60 ปีขึ้นไป · ปีงบประมาณ ${DATA.fiscalYear} ` +
+  `(${beDate(DATA.fyStart)} – ${beDate(DATA.fyEnd)})`;
+$('footer').textContent =
+  `ปีงบประมาณกำหนดจากวันที่ตรวจล่าสุดในข้อมูล ${beDate(DATA.latestServe)} · ` +
+  `สร้างจากข้อมูล ${DATA.rowsTotal.toLocaleString('th-TH')} รายการ เมื่อ ${DATA.generatedAt} · HDC Data Exchange`;
+render();
+</script>
+</body>
+</html>
