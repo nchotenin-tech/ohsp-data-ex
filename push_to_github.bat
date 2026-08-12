@@ -3,12 +3,29 @@ chcp 65001 >nul
 setlocal
 cd /d "%~dp0"
 
-set REPO_URL=https://github.com/nchotenin/ohsp-data-ex.git
-
 echo ==================================================================
 echo   Push project to GitHub
-echo   %REPO_URL%
 echo ==================================================================
+echo.
+
+REM Remember the repository URL so you only type it once
+set REPO_URL=
+if exist "repo_url.txt" set /p REPO_URL=<repo_url.txt
+
+if "%REPO_URL%"=="" (
+  echo Open your repository page on GitHub and copy the address bar URL.
+  echo Example:  https://github.com/YOUR-USERNAME/ohsp-data-ex
+  echo.
+  set /p REPO_URL=Paste your repository URL here:
+  echo.
+)
+
+if "%REPO_URL%"=="" (
+  echo [ERROR] No repository URL given.
+  pause & exit /b 1
+)
+
+echo Repository: %REPO_URL%
 echo.
 
 where git >nul 2>&1
@@ -33,9 +50,26 @@ if not exist ".git" (
   echo [1/6] Git repository already exists, skipping
 )
 
-echo [2/6] Setting remote
+echo [2/6] Checking the repository exists and you can access it
+git ls-remote "%REPO_URL%" >nul 2>&1
+if errorlevel 1 (
+  echo.
+  echo [ERROR] Cannot reach that repository. Common causes:
+  echo   1. The username in the URL is wrong - check the address bar on GitHub
+  echo   2. The repository has not been created yet on GitHub
+  echo      Create it at https://github.com/new  name: ohsp-data-ex
+  echo      Do NOT tick "Add a README file"
+  echo   3. You are signed in to a different GitHub account
+  echo.
+  echo URL tried: %REPO_URL%
+  del /q repo_url.txt >nul 2>&1
+  echo The saved URL has been cleared. Run this file again to enter a new one.
+  pause & exit /b 1
+)
+echo       OK
+> repo_url.txt echo %REPO_URL%
 git remote remove origin >nul 2>&1
-git remote add origin %REPO_URL% || goto :error
+git remote add origin "%REPO_URL%" || goto :error
 
 echo [3/6] Staging files ^(.gitignore excludes real patient data^)
 git add -A || goto :error

@@ -35,7 +35,7 @@ VERSION = "1.0.0"
 # ที่อยู่ repository บน GitHub ใช้สำหรับแจ้งเตือนเมื่อมีเวอร์ชันใหม่ เช่น "myname/ohsp-data-ex"
 # ตอน build ผ่าน GitHub Actions หรือ build.bat ค่านี้จะถูกเติมให้อัตโนมัติจาก remote ของ repo
 # ถ้าเว้นว่างไว้ โปรแกรมจะข้ามการตรวจสอบเวอร์ชันไปเลย
-GITHUB_REPO = ""
+GITHUB_REPO = "nchotenin-tech/ohsp-data-ex"
 
 AGE_ORDER = ["3ปี", "6ปี", "12ปี", "60ปี"]
 AGE_LABEL = {"3ปี": "3", "6ปี": "6", "12ปี": "12", "60ปี": "60+"}
