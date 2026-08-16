@@ -10,6 +10,7 @@
 (บางเครื่องมือบน Windows สร้าง zip ที่ทำให้ชื่อภาษาไทยเพี้ยนเมื่อแตกไฟล์)
 """
 import re
+import shutil
 import sys
 import zipfile
 from pathlib import Path
@@ -75,17 +76,32 @@ def main():
     if not EXE.exists():
         sys.exit(f"ไม่พบ {EXE} — กรุณารัน PyInstaller ก่อน")
 
+    # วางไฟล์ไว้ที่ระดับบนสุดของ zip ไม่ต้องมีโฟลเดอร์ครอบอีกชั้น
+    # เพราะ Windows สร้างโฟลเดอร์ตามชื่อไฟล์ zip ให้อยู่แล้วตอน Extract All
+    # ผู้ใช้จึงเห็นโฟลเดอร์เดียวคือ OralHealthDashboard-vX.Y.Z แล้วเจอ .exe ทันที
     out = ROOT / f"OralHealthDashboard-{version}.zip"
-    base = "OralHealthDashboard"
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
-        z.write(EXE, f"{base}/OralHealthDashboard.exe")
-        z.writestr(f"{base}/อ่านก่อนใช้งาน.txt", READ_ME_FIRST.encode("utf-8-sig"))
+        z.write(EXE, "OralHealthDashboard.exe")
+        z.writestr("อ่านก่อนใช้งาน.txt", READ_ME_FIRST.encode("utf-8-sig"))
         for doc in sorted((ROOT / "docs").glob("*.docx")):
-            z.write(doc, f"{base}/เอกสาร/{doc.name}")
+            z.write(doc, f"เอกสาร/{doc.name}")
         for doc in sorted((ROOT / "docs").glob("*.pdf")):
-            z.write(doc, f"{base}/เอกสาร/{doc.name}")
+            z.write(doc, f"เอกสาร/{doc.name}")
     size = out.stat().st_size / 1024 / 1024
     print(f"สร้างแล้ว: {out.name}  ({size:.1f} MB)")
+    with zipfile.ZipFile(out) as z:
+        for n in z.namelist():
+            print(f"   {n}")
+
+    # แตกไฟล์เดียวกันไว้ในโฟลเดอร์ package/ ด้วย
+    # GitHub Actions จะอัปโหลดโฟลเดอร์นี้เป็น Artifacts แล้วห่อ zip ให้เอง
+    # ผู้ที่ดาวน์โหลดจาก Artifacts จึงเจอ .exe ทันทีเช่นกัน ไม่มีโฟลเดอร์ซ้อน
+    stage = ROOT / "package"
+    if stage.exists():
+        shutil.rmtree(stage)
+    with zipfile.ZipFile(out) as z:
+        z.extractall(stage)
+    print(f"เตรียมโฟลเดอร์ {stage.name}/ สำหรับอัปโหลดเป็น Artifacts แล้ว")
 
 
 def read_version():

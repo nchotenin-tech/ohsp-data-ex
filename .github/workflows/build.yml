@@ -69,8 +69,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: OralHealthDashboard
-          path: OralHealthDashboard-*.zip
+          name: OralHealthDashboard        # GitHub ห่อเป็น zip ให้เอง ไม่ต้องใส่ zip ซ้อนอีกชั้น
+          path: package/
 
       - name: แนบไฟล์ลง Release
         if: github.ref_type == 'tag'
