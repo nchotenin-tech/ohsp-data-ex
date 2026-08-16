@@ -97,10 +97,10 @@ echo ==================================================================
 echo   Done. Your code is on GitHub.
 echo ==================================================================
 echo.
-echo Next step - let GitHub build the .exe for you:
-echo       git tag v1.0.0
-echo       git push origin v1.0.0
-echo Then wait a few minutes and check the Releases page of your repo.
+echo Next step - to publish a new version for the field offices, run:
+echo       release.bat
+echo It reads VERSION from src\build_dashboard.py, creates the tag,
+echo and GitHub builds the .exe and attaches it to the Releases page.
 echo.
 pause
 exit /b 0
