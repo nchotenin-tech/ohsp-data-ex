@@ -15,6 +15,13 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+# หน้าจอของ Windows ใช้รหัสอักขระเดิม ทำให้พิมพ์ภาษาไทยแล้วโปรแกรมพัง จึงบังคับเป็น UTF-8
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 EXE = ROOT / "dist" / "OralHealthDashboard.exe"
 
 READ_ME_FIRST = """\

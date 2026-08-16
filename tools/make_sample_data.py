@@ -15,6 +15,13 @@ from pathlib import Path
 
 import openpyxl
 
+# หน้าจอของ Windows ใช้รหัสอักขระเดิม ทำให้พิมพ์ภาษาไทยแล้วโปรแกรมพัง จึงบังคับเป็น UTF-8
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 COLUMNS = ["hoscode", "hosname", "pid", "cid", "name", "lname", "sex", "birth", "addr",
            "check_vhid", "nation", "check_typearea", "discharge", "age_y", "seq",
            "date_serv", "denttype", "servplace", "pteeth", "pcaries", "pfilling",

@@ -21,6 +21,13 @@ except Exception:                                          # pragma: no cover
     def insert_zwsp(t, tokenizer=None):
         return t
 
+# หน้าจอของ Windows ใช้รหัสอักขระเดิม ทำให้พิมพ์ภาษาไทยแล้วโปรแกรมพัง จึงบังคับเป็น UTF-8
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 BASE = Path(__file__).resolve().parent.parent
 OUT_DIR = BASE / "ผลลัพธ์"
 DOCS = BASE / "docs"

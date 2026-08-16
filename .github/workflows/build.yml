@@ -12,6 +12,9 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write          # จำเป็นสำหรับการสร้าง Release และแนบไฟล์
+    env:
+      PYTHONIOENCODING: utf-8  # กันข้อความภาษาไทยทำให้สคริปต์ Python พังบน Windows
+      PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -35,16 +38,31 @@ jobs:
           src/build_dashboard.py
 
       - name: ทดสอบด้วยข้อมูลจำลอง
-        run: |
-          python tools/make_sample_data.py smoke/data
-          Copy-Item dist/OralHealthDashboard.exe smoke/
-          cd smoke
-          ./OralHealthDashboard.exe --no-open
-          if (-not (Test-Path "ผลลัพธ์/dashboard.html")) { throw "ไม่พบไฟล์ผลลัพธ์" }
-          $size = (Get-Item "ผลลัพธ์/dashboard.html").Length
-          Write-Host "dashboard.html ขนาด $size ไบต์"
-          if ($size -lt 20000) { throw "ไฟล์ผลลัพธ์เล็กผิดปกติ" }
         shell: pwsh
+        run: |
+          $OutputEncoding = [Console]::OutputEncoding = [Text.Encoding]::UTF8
+          Write-Host "--- generate sample data ---"
+          python tools/make_sample_data.py smoke/data
+          if ($LASTEXITCODE -ne 0) { throw "make_sample_data.py failed ($LASTEXITCODE)" }
+
+          Copy-Item dist/OralHealthDashboard.exe smoke/
+          Push-Location smoke
+          Write-Host "--- run the program ---"
+          & ./OralHealthDashboard.exe --no-open --no-update-check
+          $rc = $LASTEXITCODE
+          Write-Host "--- program exit code: $rc ---"
+
+          Write-Host "--- files produced ---"
+          Get-ChildItem -Recurse -File | ForEach-Object { "{0,10}  {1}" -f $_.Length, $_.FullName }
+          $log = Get-ChildItem -Recurse -Filter 'log.txt' | Select-Object -First 1
+          if ($log) { Write-Host "--- log.txt ---"; Get-Content $log.FullName }
+
+          if ($rc -ne 0) { throw "program exited with code $rc" }
+          $html = Get-ChildItem -Recurse -Filter 'dashboard.html' | Select-Object -First 1
+          if (-not $html) { throw "dashboard.html was not created" }
+          if ($html.Length -lt 20000) { throw "dashboard.html is too small ($($html.Length) bytes)" }
+          Write-Host "OK - dashboard.html is $($html.Length) bytes"
+          Pop-Location
 
       - name: ประกอบไฟล์ zip
         run: python packaging/make_package.py ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
