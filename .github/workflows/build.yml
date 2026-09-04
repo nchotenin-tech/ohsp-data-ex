@@ -77,4 +77,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: OralHealthDashboard-*.zip
+          name: Dashboard วิเคราะห์สภาวะช่องปาก ${{ github.ref_name }}
+          body_path: packaging/release_notes.md   # คู่มือย่อ แสดงบนหน้า Release
+          append_body: true                       # ต่อท้ายด้วยรายการที่เปลี่ยนแปลงอัตโนมัติ
           generate_release_notes: true
