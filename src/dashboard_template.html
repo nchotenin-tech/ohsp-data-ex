@@ -79,6 +79,31 @@ select:focus{outline:2px solid var(--primary-l);border-color:var(--primary)}
 .kpi.sum .bar{background:rgba(255,255,255,.25)}
 .bar>i{position:absolute;inset:0 auto 0 0;background:var(--primary);border-radius:5px}
 .kpi.sum .bar>i{background:#fff}
+.kpi .cf{margin-top:9px;padding-top:8px;border-top:1px dashed var(--line);display:flex;
+  align-items:baseline;justify-content:space-between;gap:8px}
+.kpi.sum .cf{border-top-color:rgba(255,255,255,.3)}
+.kpi .cf .cl{font-size:12px;color:var(--muted);font-weight:700}
+.kpi.sum .cf .cl{color:rgba(255,255,255,.8)}
+.kpi .cf .cv{font-size:17px;font-weight:700;color:#475569}
+.kpi.sum .cf .cv{color:#fff}
+.bar.cfb>i{background:#94a3b8}
+/* การ์ดรายกลุ่มอายุ: สีประจำกลุ่ม + ไอคอน */
+.kpi.age{border-top:4px solid var(--k);position:relative;overflow:hidden}
+.kpi.age::after{content:"";position:absolute;right:-28px;top:-28px;width:96px;height:96px;
+  border-radius:50%;background:var(--kl);opacity:.55;pointer-events:none}
+.khead{display:flex;align-items:center;gap:10px;margin-bottom:6px;position:relative;z-index:1}
+.kico{flex:0 0 42px;height:42px;border-radius:12px;display:grid;place-items:center;
+  background:var(--kl);color:var(--k)}
+.kico svg{width:26px;height:26px}
+.kpi.sum .kico{background:rgba(255,255,255,.18);color:#fff}
+.kage{font-size:15px;font-weight:700;color:#1e293b;line-height:1.2}
+.kpi.sum .kage{color:#fff}
+.kpill{display:inline-flex;align-items:center;gap:4px;margin-top:3px;padding:1px 9px;border-radius:99px;
+  font-size:11.5px;font-weight:700;background:var(--kl);color:var(--kd)}
+.kpill.func{background:var(--kd);color:#fff}
+.kpi.age .val{color:var(--k)}
+.kpi.age .bar>i{background:var(--k)}
+.kpi.age .bar.cfb>i{background:#94a3b8}
 
 section{background:var(--card);border:1px solid var(--line);border-radius:12px;
   padding:16px 18px 18px;margin-top:16px;scroll-margin-top:78px;
@@ -128,6 +153,32 @@ tr.total th,tr.total td{background:#f1f5f9;font-weight:700}
 .dq{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.5}
 .foot{margin-top:22px;font-size:12px;color:var(--muted);text-align:center;line-height:1.6}
 
+/* ---------- สรุปรายอำเภอ ---------- */
+.amptbl{font-size:14px}
+.amptbl thead th.age{font-size:14px;color:#fff;letter-spacing:.3px}
+.amptbl thead th.a3{background:#8b5cf6}
+.amptbl thead th.a6{background:#0d9488}
+.amptbl thead th.a12{background:#e11d48}
+.amptbl thead th.sub{background:#f8fafc;color:#475569;font-size:12px;cursor:pointer;user-select:none}
+.amptbl thead th.sub:hover{background:#eef4f4}
+.amptbl thead th.sortable{cursor:pointer;user-select:none}
+.amptbl thead th .arr{color:var(--primary);font-size:10px;margin-left:3px}
+.amptbl tbody th{text-align:left;min-width:120px}
+.amptbl td.tile{padding:4px 5px}
+.amptbl .tl{position:relative;border-radius:8px;padding:5px 9px 4px;text-align:right;
+  font-variant-numeric:tabular-nums;min-width:84px}
+.amptbl .tl .v{font-size:15.5px;font-weight:700;color:#1e293b;line-height:1.2}
+.amptbl .tl .nn{font-size:10.5px;color:#64748b;line-height:1.2}
+.amptbl .tl.low{background:#f1f5f9!important}
+.amptbl .tl.low .v{color:#94a3b8;font-weight:600}
+.amptbl .tl .star{position:absolute;left:6px;top:4px;color:#d97706;font-size:14px;line-height:1}
+.amptbl tr.sel th,.amptbl tr.sel td{background:#f0fdfa}
+.amptbl tr.sel th{box-shadow:inset 4px 0 0 var(--primary)}
+.ampleg{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;margin-top:10px;
+  font-size:12.5px;color:var(--muted)}
+.ampleg .grad{display:inline-block;width:120px;height:10px;border-radius:5px;vertical-align:-1px;
+  background:linear-gradient(90deg,#fecdd3,#fef3c7,#99f6e4);margin:0 6px}
+
 @media (max-width:900px){
   .layout{flex-direction:column}
   .side{width:100%;flex:none;height:auto;position:static}
@@ -156,6 +207,7 @@ tr.total th,tr.total td{background:#f1f5f9;font-weight:700}
     <nav id="nav">
       <div class="navlab">ภาพรวม</div>
       <a data-go="sec-kpi"><span class="n">•</span> การ์ดสรุป</a>
+      <a data-go="sec-amp"><span class="n">อ</span> สรุปรายอำเภอ</a>
       <div class="navlab">ตารางรายงาน</div>
       <a data-go="sec-1"><span class="n">1</span> คุณภาพข้อมูล</a>
       <a data-go="sec-2"><span class="n">2</span> ปราศจากฟันผุ</a>
@@ -192,6 +244,22 @@ tr.total th,tr.total td{background:#f1f5f9;font-weight:700}
     <div class="wrap">
       <section id="sec-kpi" style="margin-top:0;background:none;border:0;box-shadow:none;padding:0">
         <div class="kpis" id="kpis"></div>
+      </section>
+
+      <section id="sec-amp">
+        <div class="shead">
+          <div>
+            <h2 id="ampTitle">สรุปภาพรวมรายอำเภอ</h2>
+            <p class="note">% Caries Free = ร้อยละผู้ปราศจากฟันผุ · ค่าเฉลี่ย dmft (3 ปี ฟันน้ำนม) / DMFT (6, 12 ปี ฟันแท้) = ฟันผุ+ถอน+อุด ซี่ต่อคน · ฐาน = ผู้ผ่านเกณฑ์คุณภาพ · คลิกหัวคอลัมน์เพื่อเรียงลำดับ</p>
+          </div>
+        </div>
+        <div class="tblwrap"><table class="amptbl" id="tAmp"></table></div>
+        <div class="ampleg">
+          <span>สีเทียบกันภายในคอลัมน์ <span class="grad"></span> ดีกว่า</span>
+          <span><b style="color:#d97706">★</b> ดีที่สุดของคอลัมน์</span>
+          <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#f1f5f9;border:1px solid #e2e8f0;vertical-align:-1px"></span> ฐานน้อยกว่า 30 คน ไม่นำมาจัดอันดับ</span>
+        </div>
+        <div class="ins" id="iAmp"></div>
       </section>
 
       <section id="sec-1">
@@ -376,7 +444,8 @@ function barChart(spec) {
   for (let v = 0; v <= top + 1e-9; v += step) {
     const yy = y(v);
     svg += `<line x1="${padL}" x2="${W - padR}" y1="${yy}" y2="${yy}" stroke="#e2e8f0" stroke-width="1"/>`;
-    svg += `<text x="${padL - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="#64748b">${dec(v)}</text>`;
+    const tick = spec.unit === 'ร้อยละ' && Number.isInteger(step) ? String(Math.round(v)) : dec(v);
+    svg += `<text x="${padL - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="#64748b">${tick}</text>`;
   }
   if (spec.unit)
     svg += `<text x="${padL - 8}" y="${padT - 8}" text-anchor="end" font-size="11" fill="#94a3b8">${spec.unit}</text>`;
@@ -424,11 +493,12 @@ function chartSpec(no, A) {
   const S = A['60ปี'];
   switch (no) {
     case 1: return {
-      groups: g(AGES), decimals: 0, unit: 'คน', height: 300,
+      groups: g(AGES), decimals: 1, unit: 'ร้อยละ', max: 100, height: 300,
       series: [
-        { name: 'ประชากรทั้งหมด', color: '--c6', values: AGES.map(a => A[a].total) },
-        { name: 'ได้รับการตรวจฟัน', color: '--c2', values: AGES.map(a => A[a].examined) },
-        { name: 'ผ่านเกณฑ์คุณภาพ', color: '--c1', values: AGES.map(a => A[a].quality) },
+        { name: 'ร้อยละที่ได้รับการตรวจฟัน (จากประชากรทั้งหมด)', color: '--c2',
+          values: AGES.map(a => pctN(A[a].examined, A[a].total)) },
+        { name: 'ร้อยละผ่านเกณฑ์คุณภาพ (จากผู้ที่ตรวจ)', color: '--c1',
+          values: AGES.map(a => pctN(A[a].quality, A[a].examined)) },
       ]};
     case 2: return {
       groups: g(AGES), decimals: 1, unit: 'ร้อยละ', max: 100, height: 310,
@@ -748,6 +818,127 @@ function drawInsights(A) {
   }
 }
 
+/* ---------------- สรุปภาพรวมรายอำเภอ ---------------- */
+const AMP_AGES = ['3ปี', '6ปี', '12ปี'];
+const AMP_CLS = { '3ปี': 'a3', '6ปี': 'a6', '12ปี': 'a12' };
+const dmfLabel = a => a === '3ปี' ? 'avg. dmft' : 'avg. DMFT';
+let ampSort = { key: 'name', dir: 1 };
+
+function ampStat(X, a) {
+  const t = X[a], n = t.quality;
+  return { n,
+    cf: n ? t.cariesFree / n * 100 : null,
+    dmf: n ? (t.sumCaries + t.sumExtract + t.sumFilling) / n : null };
+}
+
+/* สี 3 ระดับ ชมพู → เหลือง → เขียวน้ำทะเล ตามตำแหน่งในคอลัมน์ (1 = ดีที่สุด) */
+function tileColor(t) {
+  const stops = [[254, 205, 211], [254, 243, 199], [153, 246, 228]];
+  const x = Math.max(0, Math.min(1, t)) * 2, i = Math.min(1, Math.floor(x)), f = x - i;
+  const c = stops[i].map((v, k) => Math.round(v + (stops[i + 1][k] - v) * f));
+  return `rgb(${c.join(',')})`;
+}
+
+function ampRows() {
+  return AMPS.map(name => {
+    const r = { name };
+    AMP_AGES.forEach(a => r[a] = ampStat(AMPAGG[name], a));
+    return r;
+  });
+}
+
+function renderAmp() {
+  const rows = ampRows(), sel = $('fAmp').value || (UNIT[$('fHos').value] || {}).ampname;
+  const ok = (r, a) => r[a].n >= MIN_N;
+
+  /* ช่วงค่าและค่าดีที่สุด ของแต่ละคอลัมน์ (เฉพาะอำเภอที่ฐาน ≥ 30) */
+  const rng = {};
+  AMP_AGES.forEach(a => ['cf', 'dmf'].forEach(m => {
+    const vs = rows.filter(r => ok(r, a)).map(r => r[a][m]);
+    rng[a + m] = vs.length ? { min: Math.min(...vs), max: Math.max(...vs), n: vs.length } : null;
+  }));
+
+  /* เรียงลำดับ */
+  const k = ampSort.key, d = ampSort.dir;
+  rows.sort((x, y) => {
+    if (k === 'name') return d * x.name.localeCompare(y.name, 'th');
+    const [a, m] = k.split('|');
+    const vx = ok(x, a) ? x[a][m] : null, vy = ok(y, a) ? y[a][m] : null;
+    if (vx == null && vy == null) return x.name.localeCompare(y.name, 'th');
+    if (vx == null) return 1;
+    if (vy == null) return -1;
+    return d * (vx - vy);
+  });
+
+  const arrow = key => ampSort.key === key ? `<span class="arr">${ampSort.dir > 0 ? '▲' : '▼'}</span>` : '';
+  const tile = (r, a, m, isTotal) => {
+    const s = r[a], v = s[m];
+    if (v == null) return `<td class="tile"><div class="tl low"><div class="v">-</div><div class="nn">n=0</div></div></td>`;
+    const txt = m === 'cf' ? v.toFixed(1) + '%' : v.toFixed(2);
+    const nn = `<div class="nn">n=${fmt(s.n)}</div>`;
+    if (!isTotal && !ok(r, a))
+      return `<td class="tile"><div class="tl low" title="ฐานน้อยกว่า ${MIN_N} คน"><div class="v">${txt}</div>${nn}</div></td>`;
+    const R = rng[a + m];
+    let bg = '#eef4f4', star = '';
+    if (!isTotal && R) {
+      const span = R.max - R.min;
+      let t = span > 0 ? (v - R.min) / span : 0.5;
+      if (m === 'dmf') t = 1 - t;
+      bg = tileColor(t);
+      const best = m === 'cf' ? R.max : R.min;
+      if (R.n >= 2 && Math.abs(v - best) < 1e-9) star = '<span class="star" title="ดีที่สุดของคอลัมน์">★</span>';
+    }
+    return `<td class="tile"><div class="tl" style="background:${bg}">${star}<div class="v">${txt}</div>${nn}</div></td>`;
+  };
+
+  const thead = '<thead><tr>'
+    + `<th rowspan="2" class="sortable" data-sort="name">อำเภอ${arrow('name')}</th>`
+    + AMP_AGES.map(a => `<th colspan="2" class="age ${AMP_CLS[a]}">${DATA.ageLabel[a]} ปี</th>`).join('')
+    + '</tr><tr>'
+    + AMP_AGES.map(a =>
+        `<th class="sub" data-sort="${a}|cf">% Caries Free${arrow(a + '|cf')}</th>`
+      + `<th class="sub" data-sort="${a}|dmf">${dmfLabel(a)}${arrow(a + '|dmf')}</th>`).join('')
+    + '</tr></thead>';
+
+  const body = rows.map(r => `<tr class="${r.name === sel ? 'sel' : ''}"><th>${r.name}</th>`
+    + AMP_AGES.map(a => tile(r, a, 'cf') + tile(r, a, 'dmf')).join('') + '</tr>').join('');
+  const P = { name: 'ทั้งจังหวัด' };
+  AMP_AGES.forEach(a => P[a] = ampStat(PROV, a));
+  const foot = `<tr class="total"><th>ภาพรวมจังหวัด</th>`
+    + AMP_AGES.map(a => tile(P, a, 'cf', true) + tile(P, a, 'dmf', true)).join('') + '</tr>';
+
+  $('tAmp').innerHTML = thead + '<tbody>' + body + foot + '</tbody>';
+  $('tAmp').querySelectorAll('th[data-sort]').forEach(th => th.onclick = () => {
+    const key = th.dataset.sort;
+    if (ampSort.key === key) ampSort.dir = -ampSort.dir;
+    else ampSort = { key, dir: key === 'name' || key.endsWith('|dmf') ? 1 : -1 };
+    renderAmp();
+  });
+  $('ampTitle').textContent = `สรุปภาพรวมรายอำเภอ (ผลงานปีงบประมาณ ${DATA.fiscalYear})`;
+
+  /* ข้อสังเกต */
+  const out = [], Lb = DATA.ageLabel;
+  AMP_AGES.forEach(a => {
+    const list = rows.filter(r => ok(r, a));
+    if (list.length < 2) {
+      out.push(li('info', `อายุ ${Lb[a]} ปี มีอำเภอที่ฐานข้อมูลตั้งแต่ ${MIN_N} คนขึ้นไปไม่ถึง 2 อำเภอ จึงยังไม่เปรียบเทียบ`));
+      return;
+    }
+    const by = [...list].sort((x, y) => y[a].cf - x[a].cf);
+    const hi = by[0], lo = by[by.length - 1], p = P[a].cf;
+    const above = list.filter(r => r[a].cf >= p).length;
+    const names = v => list.filter(r => Math.abs(r[a].cf - v) < 1e-9).map(r => 'อำเภอ' + r.name).join(', ');
+    out.push(li('info',
+      `<b>อายุ ${Lb[a]} ปี</b> ปราศจากฟันผุสูงสุดที่ <span class="hl">${names(hi[a].cf)} ${hi[a].cf.toFixed(1)}%</span> `
+      + `ต่ำสุดที่ <b>${names(lo[a].cf)} ${lo[a].cf.toFixed(1)}%</b> ห่างกัน ${(hi[a].cf - lo[a].cf).toFixed(1)} จุด · `
+      + `${above} จาก ${list.length} อำเภอ อยู่ที่หรือสูงกว่าภาพรวมจังหวัด (${p == null ? '-' : p.toFixed(1) + '%'})`));
+  });
+  const low = AMP_AGES.reduce((s, a) => s + rows.filter(r => r[a].n > 0 && !ok(r, a)).length, 0);
+  if (low) out.push(li('warn', `มี ${low} ช่องที่ฐานข้อมูลน้อยกว่า ${MIN_N} คน แสดงเป็นสีเทาและไม่นำมาจัดอันดับ ควรแปลผลด้วยความระมัดระวัง`));
+  $('iAmp').innerHTML = '<h3>ข้อสังเกตจากข้อมูล</h3><ul>'
+    + out.map(x => `<li class="${x.kind}">${x.html}</li>`).join('') + '</ul>';
+}
+
 /* ---------------- ตาราง ---------------- */
 function head(rows) {
   return '<thead>' + rows.map(r => '<tr>' + r.map(c => {
@@ -757,6 +948,49 @@ function head(rows) {
 }
 const cell = (v, cls) => `<td class="${cls || ''}">${v}</td>`;
 const cnp = (n, d) => cell(fmt(n), 'num') + cell(pct(n, d), 'pct');
+
+/* การ์ดสรุป: ผลลัพธ์ (outcome) เป็นตัวเลขหลัก ความครอบคลุมการตรวจเป็นตัวรอง
+   อายุ 3, 6, 12 ปี = Caries Free · อายุ 60+ = ฟันใช้งาน ≥ 20 ซี่ · ฐาน = ผู้ผ่านเกณฑ์คุณภาพ */
+const TOOTH = 'M7 3c-2.2 0-4 1.8-4 4.2 0 2.3.8 3.6 1.5 5.3.6 1.6.8 3.4 1.2 5.5.3 1.8.8 3 1.8 3 1.2 0 1.4-1.6 1.7-3.4.3-1.6.6-3 1.8-3s1.5 1.4 1.8 3c.3 1.8.5 3.4 1.7 3.4 1 0 1.5-1.2 1.8-3 .4-2.1.6-3.9 1.2-5.5.7-1.7 1.5-3 1.5-5.3C21 4.8 19.2 3 17 3c-1.8 0-2.8 1-5 1S8.8 3 7 3z';
+const svgWrap = inner => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+const ICON = {
+  /* ฟันสะอาดมีประกาย = ปราศจากฟันผุ */
+  cf: svgWrap(`<g transform="translate(1.5 3) scale(.78)"><path d="${TOOTH}" fill="currentColor" fill-opacity=".14"/></g>`
+    + `<path d="M19 2.5v4M17 4.5h4" /><path d="M21.5 9.2v2M20.5 10.2h2" stroke-width="1.4"/>`),
+  /* ฟันสองซี่เรียงกัน = ฟันใช้งานได้ */
+  func: svgWrap(`<g transform="translate(0 4) scale(.55)"><path d="${TOOTH}" fill="currentColor" fill-opacity=".16"/></g>`
+    + `<g transform="translate(10.6 4) scale(.55)"><path d="${TOOTH}" fill="currentColor" fill-opacity=".16"/></g>`
+    + `<path d="M4 20.5h16" stroke-width="1.5"/>`),
+  /* คลิปบอร์ดเครื่องหมายถูก = ผลงานการตรวจ */
+  exam: svgWrap('<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M8.5 13l2.5 2.5 4.5-5"/>'),
+};
+const AGE_STYLE = {
+  '3ปี':  { k: '#7c3aed', kl: '#ede9fe', kd: '#5b21b6' },
+  '6ปี':  { k: '#0d9488', kl: '#ccfbf1', kd: '#115e59' },
+  '12ปี': { k: '#e11d48', kl: '#ffe4e6', kd: '#9f1239' },
+  '60ปี': { k: '#d97706', kl: '#fef3c7', kd: '#92400e' },
+};
+function kpiCard(a, t) {
+  const isOld = a === '60ปี', st = AGE_STYLE[a] || AGE_STYLE['6ปี'];
+  const [num, lab, desc, ico] = isOld
+    ? [t.func20, 'ฟันใช้งาน ≥ 20 ซี่', 'มีฟันใช้งาน 20 ซี่ขึ้นไป', ICON.func]
+    : [t.cariesFree, 'Caries Free', 'ปราศจากฟันผุ', ICON.cf];
+  const n = t.quality, v = n ? num / n * 100 : 0;
+  const cov = t.total ? t.examined / t.total * 100 : 0;
+  return `<div class="kpi age" style="--k:${st.k};--kl:${st.kl};--kd:${st.kd}">
+      <div class="khead"><div class="kico">${ico}</div>
+        <div><div class="kage">อายุ ${DATA.ageLabel[a]} ปี</div>
+        <span class="kpill${isOld ? ' func' : ''}">${lab}</span></div></div>
+      <div class="val">${pct(num, n)}${n ? '%' : ''}</div>
+      <div class="sub">${desc} <b>${fmt(num)}</b> จาก ${fmt(n)} คนที่ผ่านเกณฑ์คุณภาพ</div>
+      <div class="bar" style="margin:8px 0 2px"><i style="width:${v}%"></i></div>
+      ${covBlock(t, cov)}</div>`;
+}
+function covBlock(t, cov) {
+  return `<div class="cf"><span class="cl">ตรวจฟัน</span><span class="cv">${pct(t.examined, t.total)}${t.total ? '%' : ''}</span></div>
+      <div class="bar cfb" style="margin:5px 0 6px"><i style="width:${cov}%"></i></div>
+      <div class="sub">ตรวจ <b>${fmt(t.examined)}</b> คน จากประชากร ${fmt(t.total)} record</div>`;
+}
 
 function render() {
   const A = aggregate();
@@ -771,21 +1005,15 @@ function render() {
           : `<b>ทั้งจังหวัด</b><br>${codes.size} หน่วยบริการ`;
 
   /* การ์ดสรุป */
-  $('kpis').innerHTML = AGES.map(a => {
-    const t = A[a], p = t.total ? t.examined / t.total * 100 : 0;
-    return `<div class="kpi">
-      <div class="lab">อายุ ${L[a]} ปี</div>
-      <div class="val">${pct(t.examined, t.total)}%</div>
-      <div class="sub">ตรวจฟัน <b>${fmt(t.examined)}</b> คน</div>
-      <div class="bar" style="margin:8px 0 6px"><i style="width:${p}%"></i></div>
-      <div class="sub">ประชากรทั้งหมด ${fmt(t.total)} record</div></div>`;
-  }).join('') +
+  const T = {}; ['total', 'examined'].forEach(k => T[k] = tot(k));
+  $('kpis').innerHTML = AGES.map(a => kpiCard(a, A[a])).join('') +
   `<div class="kpi sum">
-      <div class="lab">รวมทุกกลุ่มอายุ</div>
-      <div class="val">${pct(tot('examined'), tot('total'))}%</div>
-      <div class="sub">ตรวจฟัน <b>${fmt(tot('examined'))}</b> คน</div>
-      <div class="bar" style="margin:8px 0 6px"><i style="width:${tot('total') ? tot('examined') / tot('total') * 100 : 0}%"></i></div>
-      <div class="sub">ประชากรทั้งหมด ${fmt(tot('total'))} record</div></div>`;
+      <div class="khead"><div class="kico">${ICON.exam}</div>
+        <div><div class="kage">รวมทุกกลุ่มอายุ</div><div class="lab">ผลงานการตรวจฟัน</div></div></div>
+      <div class="val">${pct(T.examined, T.total)}%</div>
+      <div class="sub">ตรวจฟัน <b>${fmt(T.examined)}</b> คน จากประชากร ${fmt(T.total)} record</div>
+      <div class="bar" style="margin:8px 0 6px"><i style="width:${T.total ? T.examined / T.total * 100 : 0}%"></i></div>
+      <div class="sub">ผลลัพธ์แต่ละกลุ่มอายุใช้ตัวชี้วัดต่างกัน จึงไม่รวมเป็นค่าเดียว</div></div>`;
 
   /* ตารางที่ 1 */
   $('t1').innerHTML = head([['อายุ', 'ประชากรทั้งหมด', 'จำนวนที่ตรวจ', 'ร้อยละที่ตรวจ',
@@ -864,6 +1092,7 @@ function render() {
 
   drawInsights(A);
   drawCharts(A);
+  renderAmp();
 }
 
 /* ---------------- ส่งออก CSV ---------------- */
@@ -925,6 +1154,17 @@ function exportCsv() {
     rows.push([L[a], t.needFluoride, pct(t.needFluoride, n), t.needSealant, pct(t.needSealant, n),
       t.needFilling, pct(t.needFilling, n), t.needExtract, pct(t.needExtract, n),
       t.needScaling, pct(t.needScaling, n), n]); });
+
+  rows.push([]);
+  rows.push(['สรุปภาพรวมรายอำเภอ (ทั้งจังหวัด ไม่ขึ้นกับตัวกรอง)']);
+  rows.push(['อำเภอ', ...AMP_AGES.flatMap(a => [
+    `${L[a]} ปี % Caries Free`, `${L[a]} ปี ${dmfLabel(a)}`, `${L[a]} ปี ฐาน`])]);
+  const ampLine = (name, X) => [name, ...AMP_AGES.flatMap(a => {
+    const s = ampStat(X, a);
+    return [s.cf == null ? '-' : s.cf.toFixed(1), s.dmf == null ? '-' : s.dmf.toFixed(2), s.n];
+  })];
+  AMPS.forEach(a => rows.push(ampLine(a, AMPAGG[a])));
+  rows.push(ampLine('ภาพรวมจังหวัด', PROV));
 
   const csv = '﻿' + rows.map(r => r.map(c => {
     const v = (c == null ? '' : String(c));
