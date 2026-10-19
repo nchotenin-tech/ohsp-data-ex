@@ -46,7 +46,7 @@ nav a.on .n{background:var(--primary);color:#fff}
 .sidefoot button{width:100%;margin-bottom:8px;padding:9px;border:0;border-radius:8px;
   background:var(--primary);color:#fff;font-family:inherit;font-size:13.5px;
   font-weight:600;cursor:pointer}
-.sidefoot button:hover{background:#0d9488}
+.sidefoot button:hover{filter:brightness(1.15)}
 
 /* ---------- แถบตัวกรอง ---------- */
 .topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);
@@ -219,6 +219,7 @@ tr.total th,tr.total td{background:#f1f5f9;font-weight:700}
     </nav>
     <div class="sidefoot">
       <button id="btnCsv">ดาวน์โหลดตารางเป็น CSV</button>
+      <button id="btnRegion" style="background:#7c2d12" title="ข้อมูลจำนวนดิบระดับจังหวัด แยกกลุ่มอายุ สำหรับนำไปรวมกับจังหวัดอื่นเป็นระดับเขต">ส่งออกข้อมูลรวมระดับเขต</button>
       <button id="btnAllCharts" style="background:#134e4a">แสดงกราฟทุกตาราง</button>
       <div id="sidefoot"></div>
     </div>
@@ -1177,6 +1178,54 @@ function exportCsv() {
   URL.revokeObjectURL(a.href);
 }
 
+/* ---------------- ส่งออกข้อมูลรวมระดับเขต ----------------
+   หนึ่งแถว = หนึ่งจังหวัด × หนึ่งกลุ่มอายุ เก็บเฉพาะ "จำนวน" และ "ผลรวม" ซึ่งบวกกันข้ามจังหวัดได้ตรง ๆ
+   ร้อยละและค่าเฉลี่ยระดับเขตให้คำนวณใหม่จากผลรวม (ห้ามเฉลี่ยร้อยละของแต่ละจังหวัด)
+   ไม่ขึ้นกับตัวกรอง ส่งออกทั้งจังหวัดเสมอ และไม่มีข้อมูลรายบุคคล */
+const REGION_COLS = [
+  ['total', 'ประชากรทั้งหมด'], ['examined', 'ได้รับการตรวจในปีงบ'], ['quality', 'ผ่านเกณฑ์คุณภาพ'],
+  ['failProvider', 'ไม่ผ่าน_ผู้ตรวจ'], ['failRange', 'ไม่ผ่าน_พิสัยจำนวนฟัน'],
+  ['cariesFree', 'ปราศจากฟันผุ'], ['cariesUntreated', 'มีฟันผุไม่ได้รักษา'], ['extracted', 'มีฟันถอน'],
+  ['filled', 'มีฟันอุด'], ['dmftAny', 'มีประสบการณ์ฟันผุ'],
+  ['sumTeeth', 'ผลรวม_ฟันที่มีในปาก'], ['sumCaries', 'ผลรวม_ฟันผุ'], ['sumExtract', 'ผลรวม_ฟันถอน'],
+  ['sumFilling', 'ผลรวม_ฟันอุด'],
+  ['gumN', 'ฐานสภาวะเหงือก'], ['gum0', 'เหงือก_ปกติ'], ['gum1', 'เหงือก_เลือดออก'],
+  ['gum2', 'เหงือก_อักเสบ'], ['gum3', 'เหงือก_ปริทันต์'], ['gum9', 'เหงือก_ตรวจไม่ได้'],
+  ['sxt0', 'sextant_ปกติ'], ['sxt1', 'sextant_เลือดออก'], ['sxt2', 'sextant_อักเสบ'],
+  ['sxt3', 'sextant_ปริทันต์'], ['sxt9', 'sextant_ตรวจไม่ได้'],
+  ['func20', 'ฟันใช้งาน20ซี่'], ['occl4', 'คู่สบฟันหลัง4คู่'], ['func20occl4', 'ฟัน20ซี่และคู่สบ4คู่'],
+  ['needFluoride', 'ต้องการ_ทาฟลูออไรด์'], ['needSealant', 'ต้องการ_เคลือบหลุมร่องฟัน'],
+  ['needFilling', 'ต้องการ_อุดฟัน'], ['needExtract', 'ต้องการ_ถอนฟันหรือรักษาราก'],
+  ['needScaling', 'ต้องการ_ขูดหินปูน'],
+];
+function mainProvince() {
+  const cnt = {};
+  DATA.units.forEach(u => cnt[u.pvname] = (cnt[u.pvname] || 0) + 1);
+  return Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0] || 'ไม่ทราบจังหวัด';
+}
+function exportRegion() {
+  const pv = mainProvince(), L = DATA.ageLabel;
+  const header = ['จังหวัด', 'ปีงบประมาณ', 'วันที่ตรวจล่าสุด', 'กลุ่มอายุ', 'จำนวนหน่วยบริการ',
+    ...REGION_COLS.map(c => c[1]), 'เวอร์ชันโปรแกรม', 'วันที่สร้าง'];
+  const rows = [header];
+  AGES.forEach(a => {
+    const t = PROV[a];
+    const units = new Set(DATA.records.filter(r => r.age === a && r.total > 0).map(r => r.hoscode)).size;
+    rows.push([pv, DATA.fiscalYear, DATA.latestServe, L[a], units,
+      ...REGION_COLS.map(c => Math.round((t[c[0]] || 0) * 100) / 100),
+      DATA.version || '', DATA.generatedAt]);
+  });
+  const csv = '﻿' + rows.map(r => r.map(c => {
+    const v = (c == null ? '' : String(c));
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }).join(',')).join('\r\n');
+  const el = document.createElement('a');
+  el.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  el.download = `รวมเขต_สภาวะช่องปาก_${pv}_ปีงบ${DATA.fiscalYear}.csv`;
+  el.click();
+  URL.revokeObjectURL(el.href);
+}
+
 /* ---------------- เริ่มทำงาน ---------------- */
 const beDate = s => { const [y, m, d] = s.split('-'); return `${d}/${m}/${+y + 543}`; };
 
@@ -1186,6 +1235,7 @@ $('fAmp').onchange = () => { fillHos(); render(); };
 $('fHos').onchange = render;
 $('btnReset').onclick = () => { $('fAmp').value = ''; fillHos(); render(); };
 $('btnCsv').onclick = exportCsv;
+$('btnRegion').onclick = exportRegion;
 $('btnAllCharts').onclick = () => {
   if (openCharts.size === 7) openCharts.clear();
   else for (let i = 1; i <= 7; i++) openCharts.add(i);
