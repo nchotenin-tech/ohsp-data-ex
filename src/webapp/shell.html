@@ -97,6 +97,10 @@ table.files{width:100%;border-collapse:collapse;margin-top:16px;font-size:14px}
 .gobar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
 .gobar .sub{max-width:560px}
 
+/* ---------- รายงานที่จำไว้ ---------- */
+.last{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-left:5px solid #14b8a6}
+.lastbtns{display:flex;gap:10px;flex-wrap:wrap}
+
 /* ---------- คู่มือ ---------- */
 details.help summary{cursor:pointer;font-weight:700;font-size:15.5px}
 details.help table{border-collapse:collapse;width:100%;margin-top:10px;font-size:14px}
@@ -132,6 +136,17 @@ details.help li{margin:4px 0}
   </header>
 
   <main class="wrap stack">
+    <section class="card last hidden" id="lastCard">
+      <div>
+        <h2>รายงานล่าสุดที่จำไว้</h2>
+        <p class="sub" id="lastInfo"></p>
+      </div>
+      <div class="lastbtns">
+        <button class="btn" id="openLast">เปิดรายงานล่าสุด</button>
+        <button class="btn ghost" id="clearLast" title="ลบตัวเลขสรุปที่เบราว์เซอร์จำไว้ เหมาะกับเครื่องที่ใช้ร่วมกัน">ล้างรายงานที่จำไว้</button>
+      </div>
+    </section>
+
     <section class="card privacy">
       <svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
         <path d="M20 3 6 8.5v9.2c0 8.8 6 16.4 14 19.3 8-2.9 14-10.5 14-19.3V8.5L20 3Z" fill="#ccfbf1" stroke="#0f766e" stroke-width="2"/>
@@ -144,8 +159,8 @@ details.help li{margin:4px 0}
         <ul>
           <li>ไฟล์ Excel ถูกอ่านและคำนวณ<b>ในเครื่องนี้</b> ไม่มีการอัปโหลดไปที่ใด</li>
           <li>หน้านี้<b>ถูกล็อกไม่ให้เชื่อมต่ออินเทอร์เน็ต</b>ด้วย Content-Security-Policy ใช้งานได้แม้ถอดสาย LAN</li>
-          <li>เก็บเฉพาะคอลัมน์ผลตรวจที่ใช้คำนวณ ไม่เก็บชื่อ สกุล เลขบัตร ที่อยู่ และ<b>ไม่บันทึกอะไรไว้ในเครื่อง</b> ปิดหน้านี้แล้วข้อมูลหายไปทั้งหมด</li>
-          <li>รายงานที่บันทึกออกไปมีแต่ตัวเลขสรุปรายหน่วยบริการ ไม่มีข้อมูลรายบุคคล</li>
+          <li>เก็บเฉพาะคอลัมน์ผลตรวจที่ใช้คำนวณ <b>ไม่เก็บชื่อ สกุล เลขบัตร ที่อยู่</b> ข้อมูลรายบุคคลอยู่ในหน่วยความจำชั่วคราว ปิดหน้านี้แล้วหายทั้งหมด</li>
+          <li>เบราว์เซอร์จำไว้เฉพาะ<b>ตัวเลขสรุปของรายงานล่าสุด</b> (ระดับหน่วยบริการ ไม่มีข้อมูลรายบุคคล) เพื่อเปิดดูซ้ำได้ทันที กดล้างได้ทุกเมื่อ</li>
         </ul>
       </div>
     </section>
@@ -213,7 +228,7 @@ details.help li{margin:4px 0}
 
 <div id="viewer" class="hidden">
   <div class="vbar">
-    <button id="back">← เปลี่ยนไฟล์ข้อมูล</button>
+    <button id="back">← นำเข้าข้อมูลชุดใหม่</button>
     <span class="lock" title="หน้านี้ถูกล็อกไม่ให้เชื่อมต่ออินเทอร์เน็ต">
       <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
       ประมวลผลในเครื่องนี้ ไม่มีการส่งข้อมูลออก

@@ -229,6 +229,26 @@ function showMsg(kind, title, items) {
     ? `<div class="msg ${kind}"><b>${esc(title)}</b>${items && items.length ? '<ul>' + items.map(i => `<li>${esc(i)}</li>`).join('') + '</ul>' : ''}</div>` : '';
 }
 
+/* ---------- จำรายงานล่าสุด (เฉพาะตัวเลขสรุประดับหน่วยบริการ) ---------- */
+const LAST_KEY = 'ohsp-dashboard.lastReport.v1';
+function loadLast() {
+  try {
+    const o = JSON.parse(localStorage.getItem(LAST_KEY) || 'null');
+    return o && o.summary && Array.isArray(o.summary.records) ? o : null;
+  } catch (e) { return null; }
+}
+function saveLast(summary, info) {
+  try { localStorage.setItem(LAST_KEY, JSON.stringify({ summary, info })); return true; }
+  catch (e) { return false; }
+}
+function clearLast() { try { localStorage.removeItem(LAST_KEY); } catch (e) { /* ignore */ } }
+function renderLastCard() {
+  const o = loadLast();
+  $('lastCard').classList.toggle('hidden', !o);
+  if (o) $('lastInfo').textContent = `ปีงบประมาณ ${o.summary.fiscalYear} · ${fmt(o.summary.rowsTotal)} รายการ · ` +
+    `${o.summary.units.length} หน่วยบริการ · สร้างเมื่อ ${o.summary.generatedAt}`;
+}
+
 function buildReport(summary) {
   const json = JSON.stringify(summary).replace(/</g, '\\u003c');
   let html = TEMPLATE.replace('/*__DATA__*/null', () => json);
@@ -255,14 +275,10 @@ $('go').onclick = async () => {
     }
     const unknown = s.unknownCodes;
     delete s.unknownCodes;
-    lastSummary = s;
-    lastHtml = buildReport(s);
-    $('frame').srcdoc = lastHtml;
-    $('vinfo').textContent = `ปีงบประมาณ ${s.fiscalYear} · ${fmt(s.rowsTotal)} รายการ · ${s.units.length} หน่วยบริการ` +
+    const info = `ปีงบประมาณ ${s.fiscalYear} · ${fmt(s.rowsTotal)} รายการ · ${s.units.length} หน่วยบริการ` +
       (unknown ? ` · ${unknown} รหัสไม่พบในตารางหน่วยบริการ (จัดเป็น "ไม่ทราบอำเภอ")` : '');
-    $('home').classList.add('hidden');
-    $('viewer').classList.remove('hidden');
-    document.title = `Dashboard สภาวะช่องปาก ปีงบประมาณ ${s.fiscalYear}`;
+    const kept = saveLast(s, info);
+    showReport(s, info + (kept ? '' : ' · (เบราว์เซอร์จำรายงานนี้ไว้ไม่ได้ กรุณากดบันทึกเป็นไฟล์)'));
   } catch (e) {
     showMsg('err', e.title || 'คำนวณไม่สำเร็จ', e.hints || [String(e)]);
   } finally {
@@ -271,7 +287,24 @@ $('go').onclick = async () => {
   }
 };
 
+function showReport(s, info) {
+  lastSummary = s;
+  lastHtml = buildReport(s);
+  $('frame').srcdoc = lastHtml;
+  $('vinfo').textContent = info;
+  $('home').classList.add('hidden');
+  $('viewer').classList.remove('hidden');
+  document.title = `Dashboard สภาวะช่องปาก ปีงบประมาณ ${s.fiscalYear}`;
+}
+function openLast() {
+  const o = loadLast();
+  if (o) showReport(o.summary, `รายงานที่จำไว้ · สร้างเมื่อ ${o.summary.generatedAt} · ${o.info || ''}`);
+}
+$('openLast').onclick = openLast;
+$('clearLast').onclick = () => { clearLast(); renderLastCard(); };
+
 $('back').onclick = () => {
+  renderLastCard();
   $('viewer').classList.add('hidden');
   $('home').classList.remove('hidden');
   $('frame').srcdoc = '';
@@ -299,4 +332,6 @@ if (!browserOk()) {
   startWorker();
 }
 render();
+renderLastCard();
+if (loadLast()) openLast();                 // เปิดโปรแกรมแล้วเห็นรายงานล่าสุดทันที
 })();
