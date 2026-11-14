@@ -10,6 +10,17 @@ const AGE_BY_NUMBER = { 3: '3ปี', 6: '6ปี', 12: '12ปี', 60: '60ป�
 const fmt = n => Number(n).toLocaleString('th-TH');
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// รหัสรายงาน HDC ในชื่อไฟล์ที่ส่งออกมา
+const REPORT_AGE = { '18.2': '3ปี', '18.3': '6ปี', '18.5': '12ปี', '18.11': '60ปี' };
+function ageFromFileName(name) {
+  const s = String(name || '');
+  const code = s.match(/(?:^|[^\d.])(18\.(?:11|2|3|5))(?![\d.])/);
+  if (code) return REPORT_AGE[code[1]];
+  const m = s.match(/อายุ\s*(\d+)/);
+  if (m && AGE_BY_NUMBER[+m[1]]) return AGE_BY_NUMBER[+m[1]];
+  if (/ผู้สูงอายุ/.test(s)) return '60ปี';
+  return ageFromName(s.replace(/\d+\.\d+/g, ' ').replace(/\(\d+\)/g, ' '));   // ตัดรหัสรายงาน (18.3) และเลขไฟล์ซ้ำ (2) ออกก่อน
+}
 function ageFromName(name) {
   const nums = String(name || '').match(/\d+/g) || [];
   for (const n of nums) if (AGE_BY_NUMBER[parseInt(n, 10)]) return AGE_BY_NUMBER[parseInt(n, 10)];
@@ -82,7 +93,7 @@ function addFiles(list) {
     const dirs = (path || '').split('/').slice(0, -1).reverse();
     let age = null, ageSrc = null;
     for (const d of dirs) { age = ageFromName(d); if (age) { ageSrc = 'โฟลเดอร์ ' + d; break; } }
-    if (!age) { age = ageFromName(name.replace(/\.xlsx$/i, '')); if (age) ageSrc = 'ชื่อไฟล์'; }
+    if (!age) { age = ageFromFileName(name.replace(/\.xlsx$/i, '')); if (age) ageSrc = 'ชื่อไฟล์'; }
     const f = { id: 'f' + (++fileSeq), file, name, path: path || name, age, ageSrc, ageData: null,
                 status: 'wait', rows: 0, error: null };
     files.push(f);
@@ -102,6 +113,8 @@ async function parseFile(f) {
     f.rows = res.rows;
     f.ageData = res.ageData;
     if (!f.age && res.ageData) { f.age = res.ageData; f.ageSrc = 'คอลัมน์ age_y ในข้อมูล'; }
+    // ชื่อไฟล์เชื่อถือได้น้อยกว่าข้อมูลจริง: ถ้าขัดกัน ใช้ค่าจากคอลัมน์ age_y (ชื่อโฟลเดอร์ผู้ใช้ตั้งเอง จึงคงไว้และแสดงป้ายเตือน)
+    else if (f.ageSrc === 'ชื่อไฟล์' && res.ageData && res.ageData !== f.age) { f.age = res.ageData; f.ageSrc = 'คอลัมน์ age_y ในข้อมูล'; }
     if (!files.includes(f)) call({ cmd: 'drop', id: f.id });
   } catch (e) {
     f.status = 'err';

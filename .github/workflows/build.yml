@@ -35,6 +35,8 @@ jobs:
         run: |
           mkdir -p webapp
           cp dist/OHSP-Dashboard.html "webapp/OHSP-Dashboard-${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}.html"
+      - name: สร้าง zip พร้อมโครงสร้างโฟลเดอร์มาตรฐาน
+        run: python tools/make_webapp_package.py webapp
       - uses: actions/upload-artifact@v4
         with:
           name: OHSP-Dashboard-html

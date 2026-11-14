@@ -107,6 +107,7 @@ details.help table{border-collapse:collapse;width:100%;margin-top:10px;font-size
 details.help td,details.help th{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
 details.help th{font-size:12px;color:var(--muted)}
 details.help ol{padding-left:20px;margin:10px 0 0}
+details.help pre.tree{background:#0f3d3a;color:#ccfbf1;border-radius:10px;padding:12px 16px;font-size:13.5px;line-height:1.55;overflow-x:auto;margin:6px 0 8px;font-family:Consolas,"Cascadia Mono",monospace}
 details.help li{margin:4px 0}
 .foot{text-align:center;color:var(--muted);font-size:12.5px;padding:6px 0 30px}
 
@@ -201,7 +202,16 @@ details.help li{margin:4px 0}
 
     <section class="card">
       <details class="help">
-        <summary>วิธีส่งออกข้อมูลจาก HDC</summary>
+        <summary>วิธีส่งออกข้อมูลจาก HDC และการจัดเก็บไฟล์</summary>
+        <p style="margin:12px 0 4px"><b>โครงสร้างโฟลเดอร์มาตรฐาน</b> (ดาวน์โหลด Dashboard-HdcOralStatus-vX.zip จากหน้า Releases แตกไฟล์แล้วได้ครบ)</p>
+        <pre class="tree">Dashboard-HdcOralStatus\
+├─ OHSP-Dashboard-v__VERSION__.html   ← ไฟล์นี้
+└─ data\
+   ├─ 3ปี\    ← รายงาน 18.2
+   ├─ 6ปี\    ← รายงาน 18.3
+   ├─ 12ปี\   ← รายงาน 18.5
+   └─ 60ปี\   ← รายงาน 18.11 (หลายไฟล์ได้)</pre>
+        <p class="sub" style="margin:0 0 6px">วางไฟล์ Excel ลงโฟลเดอร์ตามกลุ่มอายุ แล้วกด “เลือกทั้งโฟลเดอร์” เลือก data · ได้ข้อมูลชุดใหม่ให้ย้ายไฟล์ชุดเก่าออกก่อน</p>
         <ol>
           <li>เข้าระบบ HDC แล้วเปิดรายงานตามกลุ่มอายุในตารางด้านล่าง</li>
           <li>กดปุ่มส่งออกแบบ <b>Data Exchange</b> (ไม่ใช่ปุ่มส่งออกตารางสรุป) เพราะต้องใช้ข้อมูลรายบุคคลที่มีผลตรวจฟันครบ</li>
