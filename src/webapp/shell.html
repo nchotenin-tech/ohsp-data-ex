@@ -97,6 +97,25 @@ table.files{width:100%;border-collapse:collapse;margin-top:16px;font-size:14px}
 .gobar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
 .gobar .sub{max-width:560px}
 
+/* ---------- ตรวจสอบคุณภาพข้อมูล ---------- */
+#dqView{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column}
+.dqwrap{flex:1;overflow:auto;padding:18px 22px 30px;max-width:1400px;width:100%;margin:0 auto}
+.dqfil{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;background:#fff;border-radius:12px;padding:12px 14px;margin:14px 0 8px;box-shadow:0 1px 3px rgba(15,23,42,.08)}
+.dqfil label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dqfil select,.dqfil input{font:inherit;font-size:14px;padding:6px 8px;border-radius:7px;border:1.5px solid var(--line);background:#fff;color:var(--text)}
+.dqfil .sp{flex:1}
+.dqtable{background:#fff;border-radius:12px;padding:4px 10px;box-shadow:0 1px 3px rgba(15,23,42,.08);overflow-x:auto}
+#dqTable{margin-top:0;font-size:13.5px}
+#dqTable td{white-space:nowrap}
+#dqTable td,#dqTable th{padding:7px 7px}
+#dqTable td.why{white-space:normal;min-width:220px;color:#7f1d1d}
+table.dqsum{border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;font-size:14px;box-shadow:0 1px 3px rgba(15,23,42,.08)}
+table.dqsum th,table.dqsum td{padding:7px 14px;border-bottom:1px solid var(--line);text-align:right}
+table.dqsum th:first-child,table.dqsum td:first-child{text-align:left}
+table.dqsum th{font-size:12px;color:var(--muted);background:#f8fafc}
+table.dqsum td.bad{color:var(--err);font-weight:700}
+.vbar button:disabled{opacity:.45;cursor:not-allowed}
+
 /* ---------- รายงานที่จำไว้ ---------- */
 .last{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-left:5px solid #14b8a6}
 .lastbtns{display:flex;gap:10px;flex-wrap:wrap}
@@ -160,7 +179,7 @@ details.help li{margin:4px 0}
         <ul>
           <li>ไฟล์ Excel ถูกอ่านและคำนวณ<b>ในเครื่องนี้</b> ไม่มีการอัปโหลดไปที่ใด</li>
           <li>หน้านี้<b>ถูกล็อกไม่ให้เชื่อมต่ออินเทอร์เน็ต</b>ด้วย Content-Security-Policy ใช้งานได้แม้ถอดสาย LAN</li>
-          <li>เก็บเฉพาะคอลัมน์ผลตรวจที่ใช้คำนวณ <b>ไม่เก็บชื่อ สกุล เลขบัตร ที่อยู่</b> ข้อมูลรายบุคคลอยู่ในหน่วยความจำชั่วคราว ปิดหน้านี้แล้วหายทั้งหมด</li>
+          <li>อ่านเฉพาะคอลัมน์ที่ใช้คำนวณ ชื่อ สกุล และเลขบัตรใช้เฉพาะในหน้า<b>ตรวจสอบคุณภาพข้อมูล</b> ข้อมูลรายบุคคลทั้งหมดอยู่ในหน่วยความจำชั่วคราว <b>ไม่บันทึกลงเครื่อง</b> ปิดหน้านี้แล้วหายทั้งหมด</li>
           <li>เบราว์เซอร์จำไว้เฉพาะ<b>ตัวเลขสรุปของรายงานล่าสุด</b> (ระดับหน่วยบริการ ไม่มีข้อมูลรายบุคคล) เพื่อเปิดดูซ้ำได้ทันที กดล้างได้ทุกเมื่อ</li>
         </ul>
       </div>
@@ -245,9 +264,40 @@ details.help li{margin:4px 0}
     </span>
     <span class="sp"></span>
     <span id="vinfo"></span>
+    <button id="dqBtn" title="รายการที่ตรวจฟันในปีงบประมาณแต่ไม่ผ่านเงื่อนไขผู้ตรวจหรือจำนวนฟัน">ตรวจสอบคุณภาพข้อมูล</button>
     <button class="pri" id="save" title="บันทึกเป็นไฟล์ .html เปิดดูหรือส่งต่อได้ มีแต่ตัวเลขสรุป ไม่มีข้อมูลรายบุคคล">บันทึกรายงานเป็นไฟล์</button>
   </div>
   <iframe id="frame" title="Dashboard"></iframe>
+</div>
+
+<!-- หน้าตรวจสอบคุณภาพข้อมูล: มีข้อมูลระบุตัวบุคคล อยู่ในหน่วยความจำเท่านั้น -->
+<div id="dqView" class="hidden">
+  <div class="vbar">
+    <button id="dqBack">← กลับไปที่รายงาน</button>
+    <b style="font-size:15px">ตรวจสอบคุณภาพข้อมูล</b>
+    <span class="sp"></span>
+    <span id="dqInfo"></span>
+  </div>
+  <div class="dqwrap">
+    <div class="msg warn" style="margin-top:0"><b>มีชื่อ-สกุลและเลขบัตรประชาชน</b>
+      ใช้เพื่อตรวจสอบและแก้ไขข้อมูลในระบบของหน่วยบริการเท่านั้น ห้ามเผยแพร่หรือส่งต่อในกลุ่มสาธารณะ ·
+      ข้อมูลหน้านี้อยู่ในหน่วยความจำชั่วคราว ไม่อยู่ในรายงานที่บันทึก และหายเมื่อปิดหน้าเว็บ</div>
+    <p class="sub" style="margin:12px 0 6px">รายการที่<b>ตรวจฟันในปีงบประมาณ</b>แล้ว แต่ไม่ถูกนับเพราะไม่ผ่านเกณฑ์คุณภาพ:
+      ผู้ตรวจต้องเป็นทันตบุคลากร (providertype 02 ทันตแพทย์ หรือ 06 ทันตาภิบาล) และจำนวนฟันต้องอยู่ในพิสัยตามกลุ่มอายุ</p>
+    <table class="dqsum" id="dqSum"></table>
+    <div class="dqfil">
+      <label>กลุ่มอายุ <select id="dqAge"></select></label>
+      <label>อำเภอ <select id="dqAmp"></select></label>
+      <label>หน่วยบริการ <select id="dqHos"></select></label>
+      <label>สาเหตุ <select id="dqWhy">
+        <option value="">ทั้งหมด</option><option value="p">ผู้ตรวจไม่ใช่ทันตบุคลากร</option><option value="r">จำนวนฟันไม่อยู่ในพิสัย</option></select></label>
+      <label>ค้นหา <input id="dqQ" placeholder="ชื่อ เลขบัตร PID"></label>
+      <span class="sp"></span>
+      <button class="btn" id="dqCsv">ดาวน์โหลด CSV ตามตัวกรอง</button>
+    </div>
+    <div id="dqCount" class="sub"></div>
+    <div class="dqtable"><table class="files" id="dqTable"></table></div>
+  </div>
 </div>
 
 <!-- ส่วนอ่าน Excel และคำนวณ ทำงานใน Web Worker -->

@@ -233,6 +233,7 @@ drop.addEventListener('drop', async e => {
 
 /* ---------------- สร้าง dashboard ---------------- */
 let lastHtml = null, lastSummary = null;
+let ISSUES = null;                             // รายการไม่ผ่านเกณฑ์ (ไม่บันทึกลงเครื่องเด็ดขาด)
 const HOSP = JSON.parse($('hosp').textContent);
 const TEMPLATE = JSON.parse($('tpl').textContent);
 const REPORT_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'";
@@ -279,6 +280,7 @@ $('go').onclick = async () => {
     const res = await call({ cmd: 'summarise', files: ok.map(f => ({ id: f.id, age: f.age, name: f.name })),
                              hospitals: HOSP, version: APP.version, appName: APP.name });
     const s = res.summary;
+    ISSUES = res.issues || [];                 // มีข้อมูลระบุตัวบุคคล: เก็บในตัวแปรเท่านั้น
     const sum = k => s.records.reduce((t, r) => t + r[k], 0);
     const ex = sum('examined'), other = sum('examinedOther');
     if (!ex) {
@@ -291,7 +293,7 @@ $('go').onclick = async () => {
     const info = `ปีงบประมาณ ${s.fiscalYear} · ${fmt(s.rowsTotal)} รายการ · ${s.units.length} หน่วยบริการ` +
       (unknown ? ` · ${unknown} รหัสไม่พบในตารางหน่วยบริการ (จัดเป็น "ไม่ทราบอำเภอ")` : '');
     const kept = saveLast(s, info);
-    showReport(s, info + (kept ? '' : ' · (เบราว์เซอร์จำรายงานนี้ไว้ไม่ได้ กรุณากดบันทึกเป็นไฟล์)'));
+    showReport(s, info + (kept ? '' : ' · (เบราว์เซอร์จำรายงานนี้ไว้ไม่ได้ กรุณากดบันทึกเป็นไฟล์)'), true);
   } catch (e) {
     showMsg('err', e.title || 'คำนวณไม่สำเร็จ', e.hints || [String(e)]);
   } finally {
@@ -300,7 +302,13 @@ $('go').onclick = async () => {
   }
 };
 
-function showReport(s, info) {
+function showReport(s, info, withIssues) {
+  if (!withIssues) ISSUES = null;
+  const b = $('dqBtn');
+  b.disabled = !ISSUES;
+  b.textContent = ISSUES ? `ตรวจสอบคุณภาพข้อมูล (${fmt(ISSUES.length)})` : 'ตรวจสอบคุณภาพข้อมูล';
+  b.title = ISSUES ? 'รายการที่ตรวจฟันในปีงบประมาณแต่ไม่ผ่านเงื่อนไขผู้ตรวจหรือจำนวนฟัน'
+                   : 'รายงานที่จำไว้ไม่มีข้อมูลรายบุคคล กด “นำเข้าข้อมูลชุดใหม่” เพื่อดูรายการ';
   lastSummary = s;
   lastHtml = buildReport(s);
   $('frame').srcdoc = lastHtml;
@@ -318,10 +326,92 @@ $('clearLast').onclick = () => { clearLast(); renderLastCard(); };
 
 $('back').onclick = () => {
   renderLastCard();
+  $('dqView').classList.add('hidden');
   $('viewer').classList.add('hidden');
   $('home').classList.remove('hidden');
   $('frame').srcdoc = '';
   document.title = `Dashboard สภาวะช่องปาก (HDC Data Exchange) v${APP.version}`;
+};
+
+/* ---------------- ตรวจสอบคุณภาพข้อมูล ---------------- */
+const AGE_TXT2 = { '3ปี': '3 ปี', '6ปี': '6 ปี', '12ปี': '12 ปี', '60ปี': '60 ปีขึ้นไป' };
+const MAX_ROWS = 500;
+function dqFilter() {
+  const age = $('dqAge').value, amp = $('dqAmp').value, hos = $('dqHos').value, why = $('dqWhy').value;
+  const q = $('dqQ').value.trim().toLowerCase();
+  return ISSUES.filter(r => (!age || r.age === age) && (!amp || r.ampname === amp) && (!hos || r.hoscode === hos)
+    && (!why || (why === 'p' ? r.failProvider : r.failRange))
+    && (!q || (r.name + ' ' + r.cid + ' ' + r.pid + ' ' + r.hosname).toLowerCase().includes(q)));
+}
+function fillSelect(el, items, allText, keep) {
+  const cur = keep ? el.value : '';
+  el.innerHTML = `<option value="">${allText}</option>` + items.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('');
+  if (items.some(([v]) => v === cur)) el.value = cur;
+}
+function dqHosOptions() {
+  const amp = $('dqAmp').value; const m = new Map();
+  for (const r of ISSUES) if (!amp || r.ampname === amp) m.set(r.hoscode, `${r.hosname} (${r.hoscode})`);
+  fillSelect($('dqHos'), [...m].sort((a, b) => (a[1] < b[1] ? -1 : 1)), 'ทุกหน่วยบริการ', true);
+}
+function dqRenderSummary() {
+  const s = lastSummary, sum = (age, k) => s.records.filter(r => r.age === age).reduce((t, r) => t + r[k], 0);
+  const rows = AGE_ORDER.map(a => {
+    const ex = sum(a, 'examined'), fp = sum(a, 'failProvider'), fr = sum(a, 'failRange'), bad = fp + fr;
+    return `<tr><td>อายุ ${AGE_TXT2[a]}</td><td>${fmt(ex)}</td><td class="${bad ? 'bad' : ''}">${fmt(bad)}</td>` +
+      `<td>${ex ? (bad / ex * 100).toFixed(1) : '0.0'}%</td><td>${fmt(fp)}</td><td>${fmt(fr)}</td></tr>`;
+  });
+  $('dqSum').innerHTML = '<tr><th>กลุ่มอายุ</th><th>ตรวจในปีงบ</th><th>ไม่ผ่านเกณฑ์</th><th>ร้อยละ</th>' +
+    '<th>ผู้ตรวจไม่ใช่ทันตบุคลากร</th><th>จำนวนฟันไม่อยู่ในพิสัย</th></tr>' + rows.join('');
+}
+function dqRender() {
+  const list = dqFilter();
+  $('dqCount').textContent = list.length > MAX_ROWS
+    ? `พบ ${fmt(list.length)} รายการ · แสดง ${fmt(MAX_ROWS)} รายการแรก (ไฟล์ CSV มีครบทุกรายการตามตัวกรอง)`
+    : `พบ ${fmt(list.length)} รายการ`;
+  $('dqCsv').disabled = !list.length;
+  const head = '<tr><th>กลุ่มอายุ</th><th>อำเภอ</th><th>หน่วยบริการ</th><th>PID</th><th>SEQ</th><th>เลขบัตรประชาชน</th>' +
+    '<th>ชื่อ-สกุล</th><th>วันที่ตรวจ</th><th>ผู้ตรวจ</th><th>providertype</th><th>ฟัน (ซี่/ผุ/อุด/ถอน)</th><th>สาเหตุที่ไม่ผ่าน</th></tr>';
+  $('dqTable').innerHTML = head + list.slice(0, MAX_ROWS).map(r =>
+    `<tr><td>${AGE_TXT2[r.age]}</td><td>${esc(r.ampname)}</td><td>${esc(r.hosname)}<div class="path">${esc(r.hoscode)}</div></td>` +
+    `<td>${esc(r.pid)}</td><td>${esc(r.seq)}</td><td>${esc(r.cid)}</td><td>${esc(r.name)}</td><td>${esc(r.date)}</td>` +
+    `<td>${esc(r.provider)}</td><td>${esc(r.providertype)}</td><td>${esc(r.teeth)}</td><td class="why">${esc(r.reason)}</td></tr>`).join('');
+}
+function openDq() {
+  if (!ISSUES) return;
+  fillSelect($('dqAge'), AGE_ORDER.filter(a => ISSUES.some(r => r.age === a)).map(a => [a, AGE_TXT2[a]]), 'ทุกกลุ่มอายุ');
+  fillSelect($('dqAmp'), [...new Set(ISSUES.map(r => r.ampname))].sort().map(a => [a, a]), 'ทุกอำเภอ');
+  dqHosOptions();
+  $('dqWhy').value = ''; $('dqQ').value = '';
+  $('dqInfo').textContent = `ปีงบประมาณ ${lastSummary.fiscalYear} · ${lastSummary.fyStart} ถึง ${lastSummary.fyEnd}`;
+  dqRenderSummary(); dqRender();
+  $('dqView').classList.remove('hidden');
+}
+$('dqBtn').onclick = openDq;
+$('dqBack').onclick = () => $('dqView').classList.add('hidden');
+['dqAge', 'dqHos', 'dqWhy'].forEach(id => $(id).addEventListener('change', dqRender));
+$('dqAmp').addEventListener('change', () => { dqHosOptions(); dqRender(); });
+let dqT = 0;
+$('dqQ').addEventListener('input', () => { clearTimeout(dqT); dqT = setTimeout(dqRender, 200); });
+$('dqCsv').onclick = () => {
+  const list = dqFilter();
+  if (!list.length) return;
+  const cols = [['age', 'กลุ่มอายุ', r => AGE_TXT2[r.age]], ['ampname', 'อำเภอ'], ['hoscode', 'รหัสหน่วยบริการ'], ['hosname', 'หน่วยบริการ'],
+    ['pid', 'PID'], ['seq', 'SEQ'], ['cid', 'เลขบัตรประชาชน'], ['name', 'ชื่อ-สกุล'], ['date', 'วันที่ตรวจ'], ['provider', 'ผู้ตรวจ'],
+    ['providertype', 'providertype'], ['teeth', 'ฟัน'], ['failProvider', 'ไม่ผ่าน_ผู้ตรวจ', r => (r.failProvider ? 1 : 0)],
+    ['failRange', 'ไม่ผ่าน_จำนวนฟัน', r => (r.failRange ? 1 : 0)], ['reason', 'สาเหตุ']];
+  // ใส่ ="..." ให้รหัสที่ขึ้นต้นด้วย 0 และเลข 13 หลัก ไม่ถูก Excel แปลงเป็นตัวเลข
+  const keepText = new Set(['hoscode', 'pid', 'seq', 'cid', 'provider', 'providertype']);
+  const cell = (k, v) => { v = String(v ?? ''); if (keepText.has(k) && /^\d+$/.test(v)) return `="${v}"`;
+    return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
+  const lines = [cols.map(c => c[1]).join(',')].concat(list.map(r => cols.map(([k, , f]) => cell(k, f ? f(r) : r[k])).join(',')));
+  const why = { p: 'ผู้ตรวจ', r: 'จำนวนฟัน' }[$('dqWhy').value];
+  const scope = [$('dqAge').value, $('dqAmp').value, $('dqHos').value, why].filter(Boolean).join('_') || 'ทั้งหมด';
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+  a.download = `ตรวจสอบคุณภาพข้อมูล_${scope}_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}.csv`;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 };
 
 $('save').onclick = () => {

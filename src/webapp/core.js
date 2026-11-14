@@ -25,6 +25,9 @@ const REQUIRED_COLS = [
 // คอลัมน์ที่เก็บเพิ่ม: hosname (ชื่อสำรองเมื่อรหัสไม่อยู่ใน hospitals) และ age_y (ใช้เดากลุ่มอายุ)
 // ไม่มีข้อมูลระบุตัวบุคคล
 const KEEP_COLS = REQUIRED_COLS.concat(['hosname', 'age_y']);
+// ตัวระบุบุคคล: เก็บเฉพาะแถวที่มีวันที่ตรวจ ใช้แสดงในหน้าตรวจสอบคุณภาพข้อมูลเท่านั้น
+// (อยู่ในหน่วยความจำชั่วคราว ไม่ถูกใส่ใน summary / รายงานที่บันทึก / localStorage)
+const ID_COLS = ['pid', 'seq', 'cid', 'name', 'lname', 'provider'];
 
 /* ======================================================================
  * 1) อ่านไฟล์ zip
@@ -308,7 +311,7 @@ async function parseXlsx(buf, onProgress) {
     return numberCellStr(v);
   };
 
-  let header = null, picks = null, width = 0;
+  let header = null, picks = null, idPicks = null, dsAt = -1, width = 0;
   const rows = [];
   const reCell = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
   const handleRow = inner => {
@@ -332,10 +335,16 @@ async function parseXlsx(buf, onProgress) {
         'คอลัมน์ที่ขาด: ' + missing.join(', '),
         'กรุณาตรวจสอบว่าเป็นไฟล์ที่ส่งออกจากระบบ HDC (Data Exchange การตรวจฟัน) และไม่ได้ถูกแก้ไขหัวตาราง']);
       picks = KEEP_COLS.map(c => header.indexOf(c));
+      idPicks = ID_COLS.map(c => header.indexOf(c));
+      dsAt = header.indexOf('date_serv');
       return;
     }
     if (!any) return;                                     // แถวว่างทั้งแถว
-    rows.push(picks.map(i => (i < 0 || vals[i] == null ? '' : intern(vals[i]))));
+    const row = picks.map(i => (i < 0 || vals[i] == null ? '' : intern(vals[i])));
+    const ds = vals[dsAt] == null ? '' : String(vals[dsAt]).trim();
+    if (ds && !NA_VALUES.has(ds.toLowerCase()))
+      row.push(idPicks.map(i => (i < 0 || vals[i] == null ? '' : Array.from(String(vals[i])).join(''))));
+    rows.push(row);
   };
 
   const reader = entryTextStream(zip, entry).getReader();
@@ -461,7 +470,40 @@ function dateText(v) {
  * @param files    [{age, name, parsed}] เรียงตามลำดับกลุ่มอายุแล้วชื่อไฟล์
  * @param hospitals {hoscode: {hosname, ampname, pvname}}
  */
-function summarise(files, hospitals, version, appName) {
+/** เหตุผลที่จำนวนฟันไม่ผ่านเกณฑ์ (ใช้เฉพาะแถวที่ไม่ผ่าน จึงไม่กระทบผลคำนวณ) */
+function rangeReasons(age, v) {
+  const t = x => (x === null ? 'ว่าง' : String(x));
+  const out = [];
+  if (age === '3ปี') {
+    const miss = ['dteeth', 'dcaries', 'dfilling', 'dextract'].filter(k => v[k] === null);
+    if (miss.length) return ['ข้อมูลฟันน้ำนมว่าง: ' + miss.join(', ')];
+    if (!(1 <= v.dteeth && v.dteeth <= 20)) out.push(`dteeth = ${t(v.dteeth)} (ต้องอยู่ระหว่าง 1–20)`);
+    const s = v.dcaries + v.dfilling + v.dextract;
+    if (!(s <= 20)) out.push(`dcaries+dfilling+dextract = ${s} (ต้องไม่เกิน 20)`);
+    if (v.dteeth + v.dextract !== 20) out.push(`dteeth+dextract = ${v.dteeth + v.dextract} (ต้องเท่ากับ 20)`);
+  } else if (age === '6ปี' || age === '12ปี') {
+    const limit = age === '6ปี' ? 12 : 28;
+    const miss = ['pteeth', 'pcaries', 'pfilling', 'pextract'].filter(k => v[k] === null);
+    if (miss.length) return ['ข้อมูลฟันแท้ว่าง: ' + miss.join(', ')];
+    if (!(1 <= v.pteeth && v.pteeth <= limit)) out.push(`pteeth = ${t(v.pteeth)} (ต้องอยู่ระหว่าง 1–${limit})`);
+    const s = v.pfilling + v.pextract + v.pcaries;
+    if (!(s <= limit)) out.push(`pcaries+pfilling+pextract = ${s} (ต้องไม่เกิน ${limit})`);
+    if (!(v.pcaries + v.pfilling <= v.pteeth)) out.push(`pcaries+pfilling = ${v.pcaries + v.pfilling} มากกว่า pteeth = ${t(v.pteeth)}`);
+  } else {
+    const miss = ['pteeth', 'pextract', 'permanent_permanent', 'permanent_prosthesis', 'prosthesis_prosthesis'].filter(k => v[k] === null);
+    if (miss.length) return ['ข้อมูลว่าง: ' + miss.join(', ')];
+    if (!(0 <= v.pteeth && v.pteeth <= 32)) out.push(`pteeth = ${t(v.pteeth)} (ต้องอยู่ระหว่าง 0–32)`);
+    const s = v.permanent_permanent + v.permanent_prosthesis + v.prosthesis_prosthesis;
+    if (!(0 <= s && s <= 10)) out.push(`คู่สบฟันรวม = ${s} (ต้องอยู่ระหว่าง 0–10)`);
+    if (!(v.pteeth + v.pextract > 0)) out.push('pteeth+pextract = 0 (ไม่มีข้อมูลฟัน)');
+  }
+  return out.length ? out : ['จำนวนฟันไม่ผ่านเงื่อนไข'];
+}
+
+/**
+ * @param issues ถ้าส่ง array มา จะเก็บรายการที่ตรวจในปีงบแต่ไม่ผ่านเกณฑ์คุณภาพลงไป (มีข้อมูลระบุตัวบุคคล)
+ */
+function summarise(files, hospitals, version, appName, issues) {
   const C = {};
   KEEP_COLS.forEach((c, i) => (C[c] = i));
 
@@ -541,7 +583,25 @@ function summarise(files, hospitals, version, appName) {
       }
       if (!providerOk) b.failProvider++;
       else if (!rangeOk) b.failRange++;
-      if (!(providerOk && rangeOk)) continue;
+      if (!(providerOk && rangeOk)) {
+        if (issues) {
+          const id = Array.isArray(row[row.length - 1]) ? row[row.length - 1] : [];
+          const reasons = [];
+          if (!providerOk) reasons.push(`providertype = ${String(g('providertype')).trim() || 'ว่าง'} (ต้องเป็น 02 หรือ 06)`);
+          if (!rangeOk) reasons.push(...rangeReasons(age, { dteeth, dcaries, dfilling, dextract, pteeth, pcaries, pfilling, pextract,
+            permanent_permanent: pp, permanent_prosthesis: ppr, prosthesis_prosthesis: prpr }));
+          const u = units[hoscode];
+          const teeth = age === '3ปี'
+            ? `d ${String(g('dteeth'))}/${String(g('dcaries'))}/${String(g('dfilling'))}/${String(g('dextract'))}`
+            : `p ${String(g('pteeth'))}/${String(g('pcaries'))}/${String(g('pfilling'))}/${String(g('pextract'))}`
+              + (age === '60ปี' ? ` · คู่สบ ${String(g('permanent_permanent'))}/${String(g('permanent_prosthesis'))}/${String(g('prosthesis_prosthesis'))}` : '');
+          issues.push({ age, ampname: u.ampname, hoscode, hosname: u.hosname,
+            pid: id[0] || '', seq: id[1] || '', cid: id[2] || '', name: [id[3], id[4]].filter(Boolean).join(' '),
+            provider: id[5] || '', providertype: String(g('providertype')).trim(), date: ds, teeth,
+            failProvider: !providerOk, failRange: !rangeOk, reason: reasons.join(' ; ') });
+        }
+        continue;
+      }
       b.quality++;
 
       // ---------- ตารางที่ 2 และ 3 ----------
@@ -635,7 +695,7 @@ class UserError extends Error {
 }
 
 const OHSP = {
-  AGE_ORDER, AGE_LABEL, REQUIRED_COLS, KEEP_COLS,
+  AGE_ORDER, AGE_LABEL, REQUIRED_COLS, KEEP_COLS, ID_COLS,
   parseXlsx, summarise, ageFromName, ageFromData, expandHospitals, UserError,
   _t: { num, cleanGum, pyFloatStr, numberCellStr, excelDate, isDateFormat, dateText },
 };
@@ -670,8 +730,9 @@ if (inWorker || root.__OHSP_FAKE_WORKER__) {
         if (!HOSP) HOSP = expandHospitals(msg.hospitals);
         const order = (a, b) => AGE_ORDER.indexOf(a.age) - AGE_ORDER.indexOf(b.age) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
         const files = msg.files.filter(f => store.has(f.id)).map(f => ({ ...f, parsed: store.get(f.id) })).sort(order);
-        const summary = summarise(files, HOSP, msg.version, msg.appName);
-        post({ id, type: 'summary', summary });
+        const issues = [];
+        const summary = summarise(files, HOSP, msg.version, msg.appName, issues);
+        post({ id, type: 'summary', summary, issues });
       }
     } catch (e) {
       post({ id, type: 'error', title: e.isUserError ? e.title : 'เกิดข้อผิดพลาดที่ไม่คาดคิด',
