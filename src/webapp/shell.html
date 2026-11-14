@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  ความปลอดภัยของข้อมูล: หน้านี้ห้ามเชื่อมต่อเครือข่ายทุกชนิด (connect-src 'none')
+  ไม่โหลดไฟล์ใด ๆ จากภายนอก ข้อมูลที่เลือกจะถูกอ่านและคำนวณในเบราว์เซอร์เครื่องนี้เท่านั้น
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; worker-src blob:; child-src blob:; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Dashboard สภาวะช่องปาก (HDC Data Exchange) v__VERSION__</title>
+<style>
+:root{
+  --bg:#eef2f5; --card:#fff; --line:#e2e8f0; --text:#1e293b; --muted:#64748b;
+  --primary:#0f766e; --primary-d:#115e59; --primary-l:#ccfbf1;
+  --side:#0f3d3a; --side-2:#12514c; --side-txt:#c9e8e3;
+  --a3:#7c3aed; --a6:#0d9488; --a12:#e11d48; --a60:#ea580c;
+  --warn:#b45309; --warn-l:#fef3c7; --err:#b91c1c; --err-l:#fee2e2;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{background:var(--bg);color:var(--text);
+  font-family:"Sarabun","Leelawadee UI","Tahoma",system-ui,sans-serif;font-size:15px;line-height:1.55}
+button{font:inherit;cursor:pointer}
+.hidden{display:none !important}
+
+/* ---------- หัวหน้า ---------- */
+.top{background:var(--side);color:#fff;padding:22px 0 64px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 22px}
+.top .row{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.top h1{margin:0;font-size:24px;font-weight:700;letter-spacing:.2px}
+.top p{margin:6px 0 0;color:var(--side-txt);font-size:14px}
+.ver{font-size:12px;color:var(--side-txt);background:rgba(255,255,255,.1);padding:4px 11px;border-radius:99px;white-space:nowrap}
+
+/* ---------- การ์ด ---------- */
+.stack{margin-top:-46px;display:flex;flex-direction:column;gap:16px;padding-bottom:40px}
+.card{background:var(--card);border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,.08),0 6px 24px rgba(15,23,42,.05);padding:22px 24px}
+.card h2{margin:0 0 4px;font-size:17px}
+.card .sub{margin:0;color:var(--muted);font-size:13.5px}
+
+.privacy{display:flex;gap:16px;align-items:flex-start;border-left:5px solid var(--primary)}
+.privacy svg{flex:0 0 40px}
+.privacy b{color:var(--primary-d)}
+.privacy ul{margin:8px 0 0;padding-left:18px;color:#334155;font-size:14px}
+.privacy li{margin:2px 0}
+
+/* ---------- พื้นที่วางไฟล์ ---------- */
+.drop{margin-top:16px;border:2px dashed #94a3b8;border-radius:12px;padding:30px 20px;text-align:center;
+  background:#f8fafc;transition:background .15s,border-color .15s}
+.drop.over{background:var(--primary-l);border-color:var(--primary)}
+.drop .big{font-size:17px;font-weight:700;margin:6px 0 2px}
+.drop .hint{color:var(--muted);font-size:13.5px}
+.btns{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+.btn{border:0;border-radius:9px;padding:10px 18px;background:var(--primary);color:#fff;font-weight:600}
+.btn:hover{background:var(--primary-d)}
+.btn.ghost{background:#fff;color:var(--primary-d);border:1.5px solid var(--primary)}
+.btn.ghost:hover{background:var(--primary-l)}
+.btn.go{font-size:17px;padding:13px 30px}
+.btn:disabled{background:#cbd5e1;color:#fff;cursor:not-allowed;border-color:#cbd5e1}
+
+/* ---------- กลุ่มอายุ ---------- */
+.ages{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+.age{border:1.5px solid var(--line);border-radius:11px;padding:10px 12px;background:#fff}
+.age .lab{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+.age .dot{width:10px;height:10px;border-radius:50%}
+.age .n{font-size:20px;font-weight:700;margin-top:2px}
+.age .f{font-size:12px;color:var(--muted)}
+.age.empty .n{color:#cbd5e1}
+@media (max-width:720px){.ages{grid-template-columns:repeat(2,1fr)}}
+
+/* ---------- รายการไฟล์ ---------- */
+table.files{width:100%;border-collapse:collapse;margin-top:16px;font-size:14px}
+.files th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
+.files td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.files td.name{word-break:break-all}
+.files .path{font-size:12px;color:var(--muted)}
+.files select{font:inherit;padding:5px 8px;border-radius:7px;border:1.5px solid var(--line);background:#fff}
+.files select.need{border-color:var(--err);background:var(--err-l)}
+.files .x{border:0;background:none;color:#94a3b8;font-size:20px;line-height:1;padding:2px 6px}
+.files .x:hover{color:var(--err)}
+.st{font-size:13px}
+.st.ok{color:var(--primary-d)}
+.st.err{color:var(--err)}
+.st .bar{height:5px;background:#e2e8f0;border-radius:4px;overflow:hidden;margin-top:4px;width:120px}
+.st .bar i{display:block;height:100%;width:40%;background:var(--primary);border-radius:4px;animation:slide 1.1s ease-in-out infinite}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
+.tag{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:99px;background:var(--warn-l);color:var(--warn);margin-top:3px}
+.empty-list{color:var(--muted);text-align:center;padding:14px 0 4px;font-size:14px}
+
+.msg{margin-top:14px;padding:12px 15px;border-radius:10px;font-size:14px}
+.msg.err{background:var(--err-l);color:#7f1d1d}
+.msg.warn{background:var(--warn-l);color:#78350f}
+.msg b{display:block;margin-bottom:2px}
+.msg ul{margin:4px 0 0;padding-left:18px}
+
+.gobar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.gobar .sub{max-width:560px}
+
+/* ---------- คู่มือ ---------- */
+details.help summary{cursor:pointer;font-weight:700;font-size:15.5px}
+details.help table{border-collapse:collapse;width:100%;margin-top:10px;font-size:14px}
+details.help td,details.help th{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+details.help th{font-size:12px;color:var(--muted)}
+details.help ol{padding-left:20px;margin:10px 0 0}
+details.help li{margin:4px 0}
+.foot{text-align:center;color:var(--muted);font-size:12.5px;padding:6px 0 30px}
+
+/* ---------- หน้ารายงาน ---------- */
+#viewer{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);z-index:10}
+.vbar{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:8px 14px;background:#0b2f2c;color:#fff;font-size:13.5px;flex-wrap:wrap}
+.vbar .sp{flex:1}
+.vbar button{border:0;border-radius:8px;padding:7px 14px;font-weight:600;background:rgba(255,255,255,.12);color:#fff}
+.vbar button:hover{background:rgba(255,255,255,.22)}
+.vbar button.pri{background:#14b8a6;color:#062e2b}
+.vbar button.pri:hover{background:#2dd4bf}
+.vbar .lock{display:flex;align-items:center;gap:6px;color:#99f6e4}
+#frame{flex:1;border:0;width:100%;background:#fff}
+</style>
+</head>
+<body>
+
+<div id="home">
+  <header class="top">
+    <div class="wrap row">
+      <div>
+        <h1>Dashboard วิเคราะห์สภาวะช่องปาก</h1>
+        <p>จากไฟล์ HDC Data Exchange การตรวจฟัน · กลุ่มอายุ 3, 6, 12 ปี และ 60 ปีขึ้นไป · ตารางที่ 1–7</p>
+      </div>
+      <span class="ver">เวอร์ชัน __VERSION__ · ทำงานแบบออฟไลน์</span>
+    </div>
+  </header>
+
+  <main class="wrap stack">
+    <section class="card privacy">
+      <svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
+        <path d="M20 3 6 8.5v9.2c0 8.8 6 16.4 14 19.3 8-2.9 14-10.5 14-19.3V8.5L20 3Z" fill="#ccfbf1" stroke="#0f766e" stroke-width="2"/>
+        <rect x="13.5" y="18" width="13" height="10" rx="2" fill="#0f766e"/>
+        <path d="M16 18v-3a4 4 0 0 1 8 0v3" fill="none" stroke="#0f766e" stroke-width="2.2"/>
+      </svg>
+      <div>
+        <h2>ข้อมูลไม่ออกจากเครื่องนี้</h2>
+        <p class="sub">ไฟล์ Data Exchange มีเลขบัตรประชาชนและข้อมูลระบุตัวบุคคล หน้านี้จึงออกแบบให้ทำงานในเบราว์เซอร์ของท่านเท่านั้น</p>
+        <ul>
+          <li>ไฟล์ Excel ถูกอ่านและคำนวณ<b>ในเครื่องนี้</b> ไม่มีการอัปโหลดไปที่ใด</li>
+          <li>หน้านี้<b>ถูกล็อกไม่ให้เชื่อมต่ออินเทอร์เน็ต</b>ด้วย Content-Security-Policy ใช้งานได้แม้ถอดสาย LAN</li>
+          <li>เก็บเฉพาะคอลัมน์ผลตรวจที่ใช้คำนวณ ไม่เก็บชื่อ สกุล เลขบัตร ที่อยู่ และ<b>ไม่บันทึกอะไรไว้ในเครื่อง</b> ปิดหน้านี้แล้วข้อมูลหายไปทั้งหมด</li>
+          <li>รายงานที่บันทึกออกไปมีแต่ตัวเลขสรุปรายหน่วยบริการ ไม่มีข้อมูลรายบุคคล</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>1. เลือกไฟล์ Excel ที่ส่งออกจาก HDC</h2>
+      <p class="sub">เลือกได้หลายไฟล์พร้อมกัน หรือเลือกทั้งโฟลเดอร์ data เดิม (ที่มีโฟลเดอร์ย่อย 3ปี 6ปี 12ปี 60ปี) ข้อมูลที่แบ่งเป็นหลายไฟล์จะถูกต่อกันให้เอง</p>
+      <div class="drop" id="drop">
+        <svg viewBox="0 0 48 48" width="46" height="46" aria-hidden="true"><path d="M14 34h-2a8 8 0 0 1-.9-15.95A12 12 0 0 1 34.6 15 9.5 9.5 0 0 1 36 34h-2" fill="none" stroke="#0f766e" stroke-width="2.5" stroke-linecap="round"/><path d="M24 40V22m0 0-6 6m6-6 6 6" fill="none" stroke="#0f766e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="big">ลากไฟล์ .xlsx หรือโฟลเดอร์มาวางที่นี่</div>
+        <div class="hint">ไฟล์จะถูกอ่านในเครื่องนี้ทันที</div>
+        <div class="btns">
+          <button class="btn" id="pickFiles">เลือกไฟล์</button>
+          <button class="btn ghost" id="pickFolder">เลือกทั้งโฟลเดอร์</button>
+        </div>
+        <input type="file" id="inFiles" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple hidden>
+        <input type="file" id="inFolder" webkitdirectory directory multiple hidden>
+      </div>
+
+      <div class="ages" id="ages"></div>
+
+      <table class="files" id="files">
+        <thead><tr><th>ไฟล์</th><th style="width:150px">กลุ่มอายุ</th><th style="width:190px">สถานะ</th><th style="width:36px"></th></tr></thead>
+        <tbody id="fileRows"></tbody>
+      </table>
+      <div class="empty-list" id="emptyList">ยังไม่ได้เลือกไฟล์</div>
+      <div id="notes"></div>
+    </section>
+
+    <section class="card gobar">
+      <div>
+        <h2>2. สร้าง Dashboard</h2>
+        <p class="sub" id="goHint">เลือกไฟล์อย่างน้อย 1 ไฟล์ และระบุกลุ่มอายุให้ครบทุกไฟล์</p>
+      </div>
+      <button class="btn go" id="go" disabled>สร้าง Dashboard</button>
+    </section>
+    <div id="goMsg"></div>
+
+    <section class="card">
+      <details class="help">
+        <summary>วิธีส่งออกข้อมูลจาก HDC</summary>
+        <ol>
+          <li>เข้าระบบ HDC แล้วเปิดรายงานตามกลุ่มอายุในตารางด้านล่าง</li>
+          <li>กดปุ่มส่งออกแบบ <b>Data Exchange</b> (ไม่ใช่ปุ่มส่งออกตารางสรุป) เพราะต้องใช้ข้อมูลรายบุคคลที่มีผลตรวจฟันครบ</li>
+          <li>ข้อมูลระดับจังหวัดที่ HDC แบ่งเป็นไฟล์ละ 100,000 รายการ เลือกมาทุกไฟล์ได้เลย</li>
+          <li>ไม่ต้องแก้หัวตารางหรือชื่อไฟล์ ถ้าชื่อไฟล์หรือโฟลเดอร์ไม่มีเลขอายุ โปรแกรมจะเดาจากคอลัมน์ age_y ให้ ตรวจดูอีกครั้งในช่องกลุ่มอายุ</li>
+        </ol>
+        <table>
+          <thead><tr><th>กลุ่มอายุ</th><th>ชื่อรายงานใน HDC</th></tr></thead>
+          <tbody>
+            <tr><td>3 ปี</td><td>18.2 OHSP ร้อยละเด็กกลุ่มอายุ 3 ปีมีฟันผุในฟันน้ำนม</td></tr>
+            <tr><td>6 ปี</td><td>18.3 OHSP ร้อยละเด็กกลุ่มอายุ 6 ปีมีฟันผุในฟันแท้</td></tr>
+            <tr><td>12 ปี</td><td>18.5 OHSP ร้อยละเด็กกลุ่มอายุ 12 ปีมีฟันผุในฟันแท้</td></tr>
+            <tr><td>60 ปีขึ้นไป</td><td>18.11 OHSP ร้อยละของผู้สูงอายุ ที่มีฟันแท้ใช้งานได้ไม่น้อยกว่า 20 ซี่</td></tr>
+          </tbody>
+        </table>
+      </details>
+    </section>
+
+    <div class="foot">
+      __APP_NAME__ เวอร์ชัน __VERSION__ · ตรวจหาเวอร์ชันใหม่ได้ที่ github.com/__REPO__/releases
+    </div>
+  </main>
+</div>
+
+<div id="viewer" class="hidden">
+  <div class="vbar">
+    <button id="back">← เปลี่ยนไฟล์ข้อมูล</button>
+    <span class="lock" title="หน้านี้ถูกล็อกไม่ให้เชื่อมต่ออินเทอร์เน็ต">
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+      ประมวลผลในเครื่องนี้ ไม่มีการส่งข้อมูลออก
+    </span>
+    <span class="sp"></span>
+    <span id="vinfo"></span>
+    <button class="pri" id="save" title="บันทึกเป็นไฟล์ .html เปิดดูหรือส่งต่อได้ มีแต่ตัวเลขสรุป ไม่มีข้อมูลรายบุคคล">บันทึกรายงานเป็นไฟล์</button>
+  </div>
+  <iframe id="frame" title="Dashboard"></iframe>
+</div>
+
+<!-- ส่วนอ่าน Excel และคำนวณ ทำงานใน Web Worker -->
+<script type="text/plain" id="core-src">/*__CORE_JS__*/</script>
+<!-- แม่แบบหน้า dashboard (ตัวเดียวกับเวอร์ชัน .exe) -->
+<script type="application/json" id="tpl">/*__TEMPLATE_JSON__*/</script>
+<!-- รหัสหน่วยบริการ → อำเภอ/จังหวัด -->
+<script type="application/json" id="hosp">/*__HOSPITALS_JSON__*/</script>
+<script>
+const APP = { version: '__VERSION__', name: '__APP_NAME__' };
+/*__APP_JS__*/
+</script>
+</body>
+</html>

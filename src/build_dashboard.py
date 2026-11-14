@@ -30,7 +30,7 @@ from datetime import datetime
 from pathlib import Path
 
 APP_NAME = "Dashboard วิเคราะห์สภาวะช่องปาก"
-VERSION = "1.2.0"
+VERSION = "2.0.0"
 
 # ที่อยู่ repository บน GitHub ใช้สำหรับแจ้งเตือนเมื่อมีเวอร์ชันใหม่ เช่น "myname/ohsp-data-ex"
 # ตอน build ผ่าน GitHub Actions หรือ build.bat ค่านี้จะถูกเติมให้อัตโนมัติจาก remote ของ repo
@@ -258,7 +258,7 @@ def combine_excels(force=False, full_csv=False):
                 writer.writerow(["" if r[i] is None else r[i] for i in picks] + [age])
                 d = r[date_at]
                 if d is not None:
-                    d = str(d).strip()
+                    d = date_text(d)
                     if d.lower() not in NA_VALUES and (latest is None or d > latest):
                         latest = d
                 n += 1
@@ -337,6 +337,13 @@ def num(value):
         return None
 
 
+def date_text(value):
+    """วันที่ตรวจ: ถ้าเป็นเซลล์วันที่ของ Excel (str ได้ 'YYYY-MM-DD 00:00:00') ใช้เฉพาะ YYYY-MM-DD
+    มิฉะนั้นการตรวจวันที่ 30 ก.ย. จะถูกนับว่าอยู่นอกปีงบประมาณ (ตรงกับเวอร์ชันเว็บ)"""
+    s = "" if value is None else str(value).strip()
+    return s[:10] if re.fullmatch(r"\d{4}-\d\d-\d\d 00:00:00", s) else s
+
+
 def n0(value):
     v = num(value)
     return 0.0 if v is None else v
@@ -407,7 +414,7 @@ def find_fiscal_year():
     if latest is None:                                     # กรณีใช้ combined.csv เดิมที่ไม่มี meta
         with open(COMBINED, encoding="utf-8-sig", newline="") as fh:
             for row in csv.DictReader(fh):
-                d = (row.get("date_serv") or "").strip()
+                d = date_text(row.get("date_serv"))
                 if d.lower() in NA_VALUES:
                     continue
                 if latest is None or d > latest:
@@ -454,7 +461,7 @@ def summarise(hospitals, fy):
                     "pvname": info.get("pvname") or "ไม่ทราบจังหวัด",
                 }
 
-            date_serv = (row.get("date_serv") or "").strip()
+            date_serv = date_text(row.get("date_serv"))
             if date_serv.lower() in NA_VALUES:
                 continue
             if not (fy_start <= date_serv <= fy_end):

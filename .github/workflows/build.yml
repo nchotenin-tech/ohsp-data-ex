@@ -1,17 +1,48 @@
-name: build-windows-exe
+name: build-release
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:          # กดสร้างเองได้จากหน้า Actions
   pull_request:
-    paths: ["src/**", "packaging/**", ".github/workflows/**"]
+    paths: ["src/**", "tools/**", "packaging/**", ".github/workflows/**"]
 
 jobs:
+  # ---------- เว็บแอปไฟล์เดียว (ตัวหลักตั้งแต่ v2.0.0) ----------
+  webapp:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: ติดตั้งไลบรารี
+        run: python -m pip install --upgrade pip openpyxl
+      - name: สร้าง OHSP-Dashboard.html
+        run: python tools/build_webapp.py
+      - name: ทดสอบว่าผลคำนวณตรงกับเวอร์ชัน Python ทุกค่า
+        run: |
+          python tools/make_sample_data.py data
+          python src/build_dashboard.py --no-open --no-update-check
+          node tools/parity_test.mjs data "ผลลัพธ์/summary.json" dist/hospitals.packed.json
+      - name: ตั้งชื่อไฟล์ตามเวอร์ชัน
+        run: |
+          mkdir -p webapp
+          cp dist/OHSP-Dashboard.html "webapp/OHSP-Dashboard-${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}.html"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OHSP-Dashboard-html
+          path: webapp/
+
+  # ---------- โปรแกรม .exe (ทางเลือกสำรอง) ----------
   build:
     runs-on: windows-latest
-    permissions:
-      contents: write          # จำเป็นสำหรับการสร้าง Release และแนบไฟล์
     env:
       PYTHONIOENCODING: utf-8  # กันข้อความภาษาไทยทำให้สคริปต์ Python พังบน Windows
       PYTHONUTF8: "1"
@@ -72,11 +103,32 @@ jobs:
           name: OralHealthDashboard        # GitHub ห่อเป็น zip ให้เอง ไม่ต้องใส่ zip ซ้อนอีกชั้น
           path: package/
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-zip
+          path: OralHealthDashboard-*.zip
+
+  # ---------- เผยแพร่ Release (เมื่อ push tag) ----------
+  release:
+    if: github.ref_type == 'tag'
+    needs: [webapp, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write          # จำเป็นสำหรับการสร้าง Release และแนบไฟล์
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: OHSP-Dashboard-html
+          path: assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-zip
+          path: assets
       - name: แนบไฟล์ลง Release
-        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
-          files: OralHealthDashboard-*.zip
+          files: assets/*
           name: Dashboard วิเคราะห์สภาวะช่องปาก ${{ github.ref_name }}
           body_path: packaging/release_notes.md   # คู่มือย่อ แสดงบนหน้า Release
           append_body: true                       # ต่อท้ายด้วยรายการที่เปลี่ยนแปลงอัตโนมัติ
