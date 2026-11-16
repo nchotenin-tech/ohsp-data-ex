@@ -371,7 +371,8 @@ $('p2Apply').onclick = async () => {
   if (p.custom) { $('pStart').value = p.start; $('pEnd').value = p.end; }
   renderPeriod();
   // คงเกณฑ์ร้อยละการตรวจที่ผู้ใช้เลือกไว้ในรายงานเดิม
-  try { keepCov = $('frame').contentDocument.getElementById('fCov').value; } catch (e) { keepCov = null; }
+  try { const d = $('frame').contentDocument; keepCov = { cov: d.getElementById('fCov').value, mode: (d.getElementById('fCovMode') || {}).value }; }
+  catch (e) { keepCov = null; }
   const btn = $('p2Apply'); btn.disabled = true; btn.textContent = 'กำลังคำนวณ…';
   const err = await generate(periodArg(p));
   btn.textContent = 'คำนวณใหม่';
@@ -381,8 +382,11 @@ $('p2Apply').onclick = async () => {
 $('frame').addEventListener('load', () => {
   if (keepCov == null) return;
   try {
-    const sel = $('frame').contentDocument.getElementById('fCov');
-    if (sel && sel.value !== keepCov) { sel.value = keepCov; sel.dispatchEvent(new Event('change')); }
+    const d = $('frame').contentDocument;
+    for (const [id, v] of [['fCovMode', keepCov.mode], ['fCov', keepCov.cov]]) {
+      const sel = d.getElementById(id);
+      if (sel && v != null && sel.value !== v) { sel.value = v; sel.dispatchEvent(new Event('change')); }
+    }
   } catch (e) { /* ignore */ }
   keepCov = null;
 });
@@ -472,6 +476,11 @@ function openDq() {
   dqHosOptions();
   $('dqWhy').value = ''; $('dqQ').value = '';
   $('dqInfo').textContent = `${periodLabel(lastSummary)} · ${thDate(lastSummary.fyStart)} ถึง ${thDate(lastSummary.fyEnd)}`;
+  try {                                       // ใช้เงื่อนไขชุดเดียวกับในรายงาน (แหล่งเดียว)
+    const src = $('frame').contentDocument.getElementById('rules1');
+    $('dqRulesBody').innerHTML = src ? src.innerHTML : '';
+    $('dqRules').classList.toggle('hidden', !src);
+  } catch (e) { $('dqRules').classList.add('hidden'); }
   dqRenderSummary(); dqRender();
   $('dqView').classList.remove('hidden');
 }

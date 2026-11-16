@@ -30,7 +30,7 @@ from datetime import datetime
 from pathlib import Path
 
 APP_NAME = "Dashboard วิเคราะห์สภาวะช่องปาก"
-VERSION = "2.3.0"
+VERSION = "2.3.1"
 
 # ที่อยู่ repository บน GitHub ใช้สำหรับแจ้งเตือนเมื่อมีเวอร์ชันใหม่ เช่น "myname/ohsp-data-ex"
 # ตอน build ผ่าน GitHub Actions หรือ build.bat ค่านี้จะถูกเติมให้อัตโนมัติจาก remote ของ repo

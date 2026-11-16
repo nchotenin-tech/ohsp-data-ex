@@ -61,6 +61,10 @@ select:focus{outline:2px solid var(--primary-l);border-color:var(--primary)}
   font-family:inherit;font-size:13.5px;cursor:pointer;color:var(--text)}
 .btn:hover{background:#f1f5f9}
 .scope{margin-left:auto;font-size:13px;color:var(--muted);text-align:right;line-height:1.4}
+.covwarn,.tw{color:#b45309;font-weight:700;cursor:help}
+.amptbl .tl .tw{position:absolute;left:6px;top:3px;font-size:12px}
+.kwarn{font-size:12px;color:#92400e;background:#fef3c7;border-radius:6px;padding:3px 7px;margin-top:4px}
+.covnote .cw{color:#b45309}
 .covnote{font-size:13px;color:#475569;background:#f0fdfa;border:1px solid #ccfbf1;border-radius:10px;padding:8px 12px;margin:0 0 12px;line-height:1.55}
 .scope b{color:var(--primary);font-size:14px}
 
@@ -112,11 +116,11 @@ section{background:var(--card);border:1px solid var(--line);border-radius:12px;
 .shead{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px}
 .shead h2{margin:0;font-size:16.5px;font-weight:700;flex:1}
 .shead .note{margin:4px 0 0;font-size:12.5px;color:var(--muted);font-weight:400;line-height:1.45}
-.chartbtn{flex:0 0 auto;padding:7px 13px;border:1px solid var(--primary);border-radius:8px;
+.chartbtn,.rulesbtn{flex:0 0 auto;padding:7px 13px;border:1px solid var(--primary);border-radius:8px;
   background:var(--primary-l);color:var(--primary-d);font-family:inherit;font-size:13px;
   font-weight:700;cursor:pointer;white-space:nowrap}
-.chartbtn:hover{background:#a7f3ec}
-.chartbtn.on{background:var(--primary);color:#fff}
+.chartbtn:hover,.rulesbtn:hover{background:#a7f3ec}
+.chartbtn.on,.rulesbtn.on{background:var(--primary);color:#fff}
 
 .tblwrap{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:14px}
@@ -152,6 +156,14 @@ tr.total th,tr.total td{background:#f1f5f9;font-weight:700}
   justify-content:center}
 .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .dq{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.5}
+.rules{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 12px}
+.rtbl{width:100%;border-collapse:collapse;font-size:13.5px;background:#fff}
+.rtbl th,.rtbl td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+.rtbl thead th{background:#f1f5f9;font-size:12.5px}
+.rtbl ol{margin:0;padding-left:18px}.rtbl li{margin:2px 0}
+.rtbl code,.rnote code{background:#eef2f5;border-radius:4px;padding:0 4px;font-size:12.5px}
+.rsub{font-weight:400;font-size:12px;color:var(--muted)}
+.rnote{font-size:12.5px;color:var(--muted);margin:6px 0;line-height:1.5}
 .foot{margin-top:22px;font-size:12px;color:var(--muted);text-align:center;line-height:1.6}
 
 /* ---------- สรุปรายอำเภอ ---------- */
@@ -189,7 +201,7 @@ tr.total th,tr.total td{background:#f1f5f9;font-weight:700}
   .wrap,.topbar{padding-left:14px;padding-right:14px}
 }
 @media print{
-  .side,.topbar,.chartbtn{display:none!important}
+  .side,.topbar,.chartbtn,.rulesbtn{display:none!important}
   .chartbox{display:block!important}
   section{break-inside:avoid;box-shadow:none}
   body{background:#fff}
@@ -246,6 +258,13 @@ tr.total th,tr.total td{background:#f1f5f9;font-weight:700}
         </select>
       </div>
       <div class="field">
+        <label for="fCovMode" title="รายหน่วยบริการ: ตัดหน่วยบริการ-กลุ่มอายุที่ตรวจไม่ถึงเกณฑ์ออก · ภาพรวมระดับที่เลือก: นับทุกหน่วย แล้วดูร้อยละการตรวจรวมของจังหวัด/อำเภอ/หน่วยบริการที่เลือก">ใช้เกณฑ์กับ</label>
+        <select id="fCovMode" autocomplete="off">
+          <option value="unit" selected>รายหน่วยบริการ</option>
+          <option value="level">ภาพรวมระดับที่เลือก</option>
+        </select>
+      </div>
+      <div class="field">
         <label>&nbsp;</label>
         <button class="btn" id="btnReset">ล้างตัวกรอง</button>
       </div>
@@ -269,7 +288,7 @@ tr.total th,tr.total td{background:#f1f5f9;font-weight:700}
         <div class="ampleg">
           <span>สีเทียบกันภายในคอลัมน์ <span class="grad"></span> ดีกว่า</span>
           <span><b style="color:#d97706">★</b> ดีที่สุดของคอลัมน์</span>
-          <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#f1f5f9;border:1px solid #e2e8f0;vertical-align:-1px"></span> ไม่มีข้อมูล</span>
+          <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#f1f5f9;border:1px solid #e2e8f0;vertical-align:-1px"></span> ไม่มีข้อมูล · ⚠ ตรวจรวมต่ำกว่าเกณฑ์ (โหมดภาพรวมระดับ)</span>
         </div>
         <div class="ins" id="iAmp"></div>
       </section>
@@ -280,7 +299,44 @@ tr.total th,tr.total td{background:#f1f5f9;font-weight:700}
             <h2>ตารางที่ 1 คุณภาพของข้อมูลการตรวจ แยกรายกลุ่มอายุ</h2>
             <p class="note">จำนวนที่ตรวจ = มีวันที่ให้บริการในปีงบประมาณ (หรือช่วงเวลาที่เลือก) · ผ่านเกณฑ์คุณภาพ = ผู้ตรวจเป็นทันตแพทย์/ทันตาภิบาล (02, 06) และจำนวนฟันอยู่ในพิสัยที่กำหนด</p>
           </div>
-          <button class="chartbtn" data-chart="1">แสดงกราฟ</button>
+          <div style="display:flex;gap:8px;flex:0 0 auto">
+            <button class="rulesbtn" id="btnRules">เงื่อนไขเกณฑ์คุณภาพ</button>
+            <button class="chartbtn" data-chart="1">แสดงกราฟ</button>
+          </div>
+        </div>
+        <div class="rules" id="rules1" style="display:none">
+          <p class="rnote" id="rulesScope"></p>
+          <table class="rtbl">
+            <thead><tr><th style="width:110px">กลุ่มอายุ</th><th>เงื่อนไขที่ต้องผ่านทุกข้อ</th></tr></thead>
+            <tbody>
+              <tr><th>ทุกกลุ่มอายุ</th><td><ol>
+                <li>มีวันที่ตรวจ (<code>date_serv</code>) อยู่ในช่วงเวลาที่คำนวณ</li>
+                <li>ผู้ตรวจเป็นทันตบุคลากร: <code>providertype</code> = <b>02</b> ทันตแพทย์ หรือ <b>06</b> ทันตาภิบาล</li>
+                <li>ข้อมูลจำนวนฟันผ่านเงื่อนไขของกลุ่มอายุด้านล่าง (ช่องว่างหรือ &lt;NA&gt; ถือว่าไม่ผ่าน)</li></ol></td></tr>
+              <tr><th>3 ปี<br><span class="rsub">ฟันน้ำนม</span></th><td><ol>
+                <li><code>dteeth</code> <code>dcaries</code> <code>dfilling</code> <code>dextract</code> ต้องมีค่าครบ</li>
+                <li>ฟันน้ำนมที่มีในปาก 1 ≤ <code>dteeth</code> ≤ 20</li>
+                <li>ผุ + อุด + ถอน (<code>dcaries + dfilling + dextract</code>) ≤ 20</li>
+                <li>ฟันที่มี + ฟันที่ถอน (<code>dteeth + dextract</code>) = 20 พอดี</li></ol></td></tr>
+              <tr><th>6 ปี<br><span class="rsub">ฟันแท้</span></th><td><ol>
+                <li><code>pteeth</code> <code>pcaries</code> <code>pfilling</code> <code>pextract</code> ต้องมีค่าครบ</li>
+                <li>ฟันแท้ที่มีในปาก 1 ≤ <code>pteeth</code> ≤ 12</li>
+                <li>ผุ + อุด + ถอน (<code>pcaries + pfilling + pextract</code>) ≤ 12</li>
+                <li>ผุ + อุด (<code>pcaries + pfilling</code>) ≤ ฟันที่มีในปาก (<code>pteeth</code>)</li></ol></td></tr>
+              <tr><th>12 ปี<br><span class="rsub">ฟันแท้</span></th><td><ol>
+                <li><code>pteeth</code> <code>pcaries</code> <code>pfilling</code> <code>pextract</code> ต้องมีค่าครบ</li>
+                <li>ฟันแท้ที่มีในปาก 1 ≤ <code>pteeth</code> ≤ 28</li>
+                <li>ผุ + อุด + ถอน (<code>pcaries + pfilling + pextract</code>) ≤ 28</li>
+                <li>ผุ + อุด (<code>pcaries + pfilling</code>) ≤ ฟันที่มีในปาก (<code>pteeth</code>)</li></ol></td></tr>
+              <tr><th>60 ปีขึ้นไป<br><span class="rsub">ฟันแท้</span></th><td><ol>
+                <li><code>pteeth</code> <code>pextract</code> <code>permanent_permanent</code> <code>permanent_prosthesis</code> <code>prosthesis_prosthesis</code> ต้องมีค่าครบ</li>
+                <li>ฟันแท้ที่มีในปาก 0 ≤ <code>pteeth</code> ≤ 32</li>
+                <li>คู่สบฟันหลังรวม (แท้–แท้ + แท้–เทียม + เทียม–เทียม) อยู่ระหว่าง 0–10 คู่</li>
+                <li>ฟันที่มี + ฟันที่ถอน (<code>pteeth + pextract</code>) มากกว่า 0</li></ol></td></tr>
+            </tbody>
+          </table>
+          <p class="rnote">หมายเหตุ: ค่า <code>gum</code> ที่ผิดรูปแบบไม่ทำให้ตกเกณฑ์คุณภาพ แต่จะไม่นับในตารางที่ 4–5 ·
+            ผู้ที่ผ่านเกณฑ์คุณภาพเป็นฐาน (ตัวหาร) ของตารางที่ 2–7 · ดูรายชื่อผู้ที่ไม่ผ่านพร้อมสาเหตุได้ที่ปุ่ม “ตรวจสอบคุณภาพข้อมูล” ในแถบด้านบน (เมื่อนำเข้าไฟล์ในรอบนั้น)</p>
         </div>
         <div class="tblwrap"><table id="t1"></table></div>
         <div class="ins" id="i1"></div>
@@ -416,8 +472,15 @@ function currentCodes() {
 /* เกณฑ์ร้อยละการตรวจฟันของหน่วยบริการ: ผลลัพธ์ (การ์ด ตาราง 2–7 สรุปรายอำเภอ) ใช้เฉพาะหน่วยบริการ-กลุ่มอายุ
    ที่ตรวจได้ตั้งแต่เกณฑ์นี้ขึ้นไป ส่วนความครอบคลุมและคุณภาพข้อมูล (ตารางที่ 1) นับทุกหน่วยบริการ */
 let COV_MIN = 50;
+/* วิธีใช้เกณฑ์: 'unit' = ตัดรายหน่วยบริการ-กลุ่มอายุ (ค่าเริ่มต้น)
+                 'level' = ดูร้อยละการตรวจรวมของระดับที่เลือก (จังหวัด/อำเภอ/หน่วยบริการ) นับผลงานทุกหน่วย และเตือนถ้าต่ำกว่าเกณฑ์ */
+let COV_MODE = 'unit';
 const COV_FIELDS = ['total', 'examined', 'examinedOther', 'failProvider', 'failRange'];
-const covOk = r => COV_MIN <= 0 || (r.total > 0 && r.examined / r.total * 100 >= COV_MIN - 1e-9);
+const covOk = r => COV_MODE === 'level' || COV_MIN <= 0 || (r.total > 0 && r.examined / r.total * 100 >= COV_MIN - 1e-9);
+/** โหมดภาพรวมระดับ: ร้อยละการตรวจรวมของกลุ่มอายุ (t = ผลรวมของระดับนั้น) ต่ำกว่าเกณฑ์หรือไม่ */
+const levelLow = t => COV_MODE === 'level' && COV_MIN > 0 && t.total > 0 && t.examined / t.total * 100 < COV_MIN - 1e-9;
+const covWarn = (t, label) => levelLow(t)
+  ? ` <span class="covwarn" title="${label || ''}ตรวจฟัน ${(t.examined / t.total * 100).toFixed(1)}% ต่ำกว่าเกณฑ์ ${COV_MIN}% ควรแปลผลด้วยความระมัดระวัง">⚠</span>` : '';
 function aggregateFor(codes) {
   const out = {};
   AGES.forEach(a => {
@@ -854,7 +917,7 @@ let ampSort = { key: 'name', dir: 1 };
 
 function ampStat(X, a) {
   const t = X[a], n = t.quality;
-  return { n,
+  return { n, low: levelLow(t), cov: t.total ? t.examined / t.total * 100 : 0,
     cf: n ? t.cariesFree / n * 100 : null,
     dmf: n ? (t.sumCaries + t.sumExtract + t.sumFilling) / n : null };
 }
@@ -877,7 +940,7 @@ function ampRows() {
 
 function renderAmp() {
   const rows = ampRows(), sel = $('fAmp').value || (UNIT[$('fHos').value] || {}).ampname;
-  const ok = (r, a) => r[a].n >= MIN_N;
+  const ok = (r, a) => r[a].n >= MIN_N && !r[a].low;
 
   /* ช่วงค่าและค่าดีที่สุด ของแต่ละคอลัมน์ (เฉพาะอำเภอที่มีข้อมูล) */
   const rng = {};
@@ -904,8 +967,12 @@ function renderAmp() {
     if (v == null) return `<td class="tile"><div class="tl low"><div class="v">-</div><div class="nn">n=0</div></div></td>`;
     const txt = m === 'cf' ? v.toFixed(1) + '%' : v.toFixed(2);
     const nn = `<div class="nn">n=${fmt(s.n)}</div>`;
-    if (!isTotal && !ok(r, a))
-      return `<td class="tile"><div class="tl low" title="ไม่มีข้อมูล"><div class="v">${txt}</div>${nn}</div></td>`;
+    if (!isTotal && !ok(r, a)) {
+      const tip = s.low ? `ตรวจฟัน ${s.cov.toFixed(1)}% ต่ำกว่าเกณฑ์ ${COV_MIN}% ไม่นำมาจัดอันดับ` : 'ไม่มีข้อมูล';
+      return `<td class="tile"><div class="tl low" title="${tip}">${s.low ? '<span class="tw">⚠</span>' : ''}<div class="v">${txt}</div>${nn}</div></td>`;
+    }
+    if (isTotal && s.low)
+      return `<td class="tile"><div class="tl" style="background:#eef4f4" title="ตรวจฟัน ${s.cov.toFixed(1)}% ต่ำกว่าเกณฑ์ ${COV_MIN}%"><span class="tw">⚠</span><div class="v">${txt}</div>${nn}</div></td>`;
     const R = rng[a + m];
     let bg = '#eef4f4', star = '';
     if (!isTotal && R) {
@@ -964,7 +1031,11 @@ function renderAmp() {
   const low = AMP_AGES.reduce((s, a) => s + rows.filter(r => r[a].n > 0 && !ok(r, a)).length, 0);
   const small = AMP_AGES.reduce((s, a) => s + rows.filter(r => r[a].n > 0 && r[a].n < 30).length, 0);
   if (small) out.push(li('info', `มี ${small} ช่องที่ฐานน้อยกว่า 30 คน ร้อยละอาจแกว่งมาก ควรดูค่า n ประกอบการแปลผล`));
-  if (COV_MIN > 0) out.push(li('info', `ผลลัพธ์รายอำเภอคำนวณเฉพาะหน่วยบริการที่ตรวจฟันได้ตั้งแต่ ${COV_MIN}% ของประชากรในกลุ่มอายุนั้น`));
+  if (COV_MIN > 0 && COV_MODE === 'unit') out.push(li('info', `ผลลัพธ์รายอำเภอคำนวณเฉพาะหน่วยบริการที่ตรวจฟันได้ตั้งแต่ ${COV_MIN}% ของประชากรในกลุ่มอายุนั้น`));
+  const lowAmp = AMP_AGES.reduce((s, a) => s + rows.filter(r => r[a].low).length, 0);
+  if (COV_MIN > 0 && COV_MODE === 'level') out.push(li(lowAmp ? 'warn' : 'info', lowAmp
+    ? `มี ${lowAmp} ช่องที่อำเภอตรวจฟันรวมต่ำกว่า ${COV_MIN}% แสดงเป็นสีเทามีเครื่องหมาย ⚠ และไม่นำมาจัดอันดับ`
+    : `ทุกอำเภอตรวจฟันรวมได้ตั้งแต่ ${COV_MIN}% ในทุกกลุ่มอายุ`));
   $('iAmp').innerHTML = '<h3>ข้อสังเกตจากข้อมูล</h3><ul>'
     + out.map(x => `<li class="${x.kind}">${x.html}</li>`).join('') + '</ul>';
 }
@@ -1011,7 +1082,8 @@ function kpiCard(a, t) {
       <div class="khead"><div class="kico">${ico}</div>
         <div><div class="kage">อายุ ${DATA.ageLabel[a]} ปี</div>
         <span class="kpill${isOld ? ' func' : ''}">${lab}</span></div></div>
-      <div class="val">${pct(num, n)}${n ? '%' : ''}</div>
+      <div class="val">${pct(num, n)}${n ? '%' : ''}${covWarn(t)}</div>
+      ${levelLow(t) ? `<div class="kwarn">ตรวจฟัน ${(t.examined / t.total * 100).toFixed(1)}% ต่ำกว่าเกณฑ์ ${COV_MIN}% ควรแปลผลด้วยความระมัดระวัง</div>` : ''}
       <div class="sub">${!n && t.unitsOut ? `ไม่มีหน่วยบริการที่ตรวจได้ถึง ${COV_MIN}% (ปรับเกณฑ์ได้ที่แถบด้านบน)`
         : `${desc} <b>${fmt(num)}</b> จาก ${fmt(n)} คนที่ผ่านเกณฑ์คุณภาพ`}</div>
       <div class="bar" style="margin:8px 0 2px"><i style="width:${v}%"></i></div>
@@ -1037,7 +1109,15 @@ function render() {
 
   /* หมายเหตุเกณฑ์ร้อยละการตรวจของหน่วยบริการ */
   const outs = AGES.filter(a => A[a].unitsOut > 0).map(a => `อายุ ${L[a]} ปี ${fmt(A[a].unitsOut)} จาก ${fmt(A[a].units)} แห่ง`);
-  $('covnote').innerHTML = COV_MIN <= 0
+  const lows = AGES.filter(a => A[a].total > 0).map(a => {
+    const c = A[a].examined / A[a].total * 100;
+    return `อายุ ${L[a]} ปี ${c.toFixed(1)}%` + (c < COV_MIN - 1e-9 ? ' <b class="cw">⚠ ต่ำกว่าเกณฑ์</b>' : ' ✓');
+  });
+  const scopeName = hos ? UNIT[hos].hosname : amp ? 'อำเภอ' + amp : 'ทั้งจังหวัด';
+  if (COV_MODE === 'level' && COV_MIN > 0) $('covnote').innerHTML =
+    `<b>เกณฑ์แบบภาพรวมระดับที่เลือก</b>: นับผลงานทุกหน่วยบริการใน${scopeName} และตรวจว่าร้อยละการตรวจรวมถึง ${COV_MIN}% หรือไม่ · ` + lows.join(' · ')
+    + ' · ตารางรายอำเภอใช้ร้อยละการตรวจรวมของแต่ละอำเภอ';
+  else $('covnote').innerHTML = COV_MIN <= 0
     ? 'ผลลัพธ์คำนวณจาก<b>ทุกหน่วยบริการ</b> (ไม่กำหนดเกณฑ์ร้อยละการตรวจ)'
     : `ผลลัพธ์ (การ์ด ตารางที่ 2–7 และสรุปรายอำเภอ) คำนวณเฉพาะหน่วยบริการที่<b>ตรวจฟันได้ตั้งแต่ ${COV_MIN}%</b> ของประชากรในกลุ่มอายุนั้น · `
       + (outs.length ? `ไม่นำมาคำนวณ: ${outs.join(' · ')}` : 'ทุกหน่วยบริการผ่านเกณฑ์')
@@ -1059,7 +1139,7 @@ function render() {
       'ผ่านเกณฑ์คุณภาพ', 'ร้อยละผ่านเกณฑ์', 'สัดส่วน']]) +
     '<tbody>' + AGES.map(a => {
       const t = A[a];
-      return `<tr><th>${L[a]}</th>` + cell(fmt(t.total), 'num') + cnp(t.examined, t.total) +
+      return `<tr><th>${L[a]}${covWarn(A[a])}</th>` + cell(fmt(t.total), 'num') + cnp(t.examined, t.total) +
         cnp(t.qualityAll, t.examined) +
         `<td><div class="bar"><i style="width:${t.examined ? t.qualityAll / t.examined * 100 : 0}%"></i></div></td></tr>`;
     }).join('') +
@@ -1076,7 +1156,7 @@ function render() {
     ['จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ']]) +
     '<tbody>' + AGES.map(a => {
       const t = A[a], n = t.quality;
-      return `<tr><th>${L[a]}</th>` + cnp(t.cariesFree, n) + cnp(t.cariesUntreated, n) +
+      return `<tr><th>${L[a]}${covWarn(A[a])}</th>` + cnp(t.cariesFree, n) + cnp(t.cariesUntreated, n) +
         cnp(t.extracted, n) + cnp(t.filled, n) + cnp(t.dmftAny, n) + cell(fmt(n), 'num') + '</tr>';
     }).join('') + '</tbody>';
 
@@ -1084,7 +1164,7 @@ function render() {
   $('t3').innerHTML = head([['อายุ', 'ฟันที่มีในปาก', 'ฟันผุ', 'ฟันถอน', 'ฟันอุด', 'ฟันผุถอนอุด', 'ฐาน (คน)']]) +
     '<tbody>' + AGES.map(a => {
       const t = A[a], n = t.quality;
-      return `<tr><th>${L[a]}</th>` + cell(avg(t.sumTeeth, n), 'num') + cell(avg(t.sumCaries, n), 'num') +
+      return `<tr><th>${L[a]}${covWarn(A[a])}</th>` + cell(avg(t.sumTeeth, n), 'num') + cell(avg(t.sumCaries, n), 'num') +
         cell(avg(t.sumExtract, n), 'num') + cell(avg(t.sumFilling, n), 'num') +
         cell(avg(t.sumCaries + t.sumExtract + t.sumFilling, n), 'num') + cell(fmt(n), 'num') + '</tr>';
     }).join('') + '</tbody>';
@@ -1095,7 +1175,7 @@ function render() {
     ['จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ']]) +
     '<tbody>' + GUM_AGES.map(a => {
       const t = A[a], n = t.gumN;
-      return `<tr><th>${L[a]}</th>` + cnp(t.gum0, n) + cnp(t.gum1, n) + cnp(t.gum2, n) +
+      return `<tr><th>${L[a]}${covWarn(A[a])}</th>` + cnp(t.gum0, n) + cnp(t.gum1, n) + cnp(t.gum2, n) +
         cnp(t.gum3, n) + cnp(t.gum9, n) + cell(fmt(n), 'num') + '</tr>';
     }).join('') + '</tbody>';
   $('dq4').textContent = 'ค่า gum ที่ใช้ไม่ได้ (ว่างหรือรูปแบบไม่ถูกต้อง): ' +
@@ -1105,7 +1185,7 @@ function render() {
   $('t5').innerHTML = head([['อายุ', 'ปกติ', 'เลือดออก', 'เหงือกอักเสบ', 'ปริทันต์', 'ตรวจไม่ได้', 'ฐาน (คน)']]) +
     '<tbody>' + GUM_AGES.map(a => {
       const t = A[a], n = t.gumN;
-      return `<tr><th>${L[a]}</th>` + cell(avg(t.sxt0, n), 'num') + cell(avg(t.sxt1, n), 'num') +
+      return `<tr><th>${L[a]}${covWarn(A[a])}</th>` + cell(avg(t.sxt0, n), 'num') + cell(avg(t.sxt1, n), 'num') +
         cell(avg(t.sxt2, n), 'num') + cell(avg(t.sxt3, n), 'num') + cell(avg(t.sxt9, n), 'num') +
         cell(fmt(n), 'num') + '</tr>';
     }).join('') + '</tbody>';
@@ -1115,7 +1195,7 @@ function render() {
   $('t6').innerHTML = head([
     [['อายุ', 1, 2], ['ฟันใช้งาน 20 ซี่', 2], ['คู่สบฟันหลัง 4 คู่ขึ้นไป', 2], ['ทั้งสองเงื่อนไข', 2], ['ฐาน (คน)', 1, 2]],
     ['จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ']]) +
-    '<tbody><tr><th>60+</th>' + cnp(S.func20, S.quality) + cnp(S.occl4, S.quality) +
+    '<tbody><tr><th>60+' + covWarn(S) + '</th>' + cnp(S.func20, S.quality) + cnp(S.occl4, S.quality) +
     cnp(S.func20occl4, S.quality) + cell(fmt(S.quality), 'num') + '</tr></tbody>';
 
   /* ตารางที่ 7 */
@@ -1124,7 +1204,7 @@ function render() {
     ['จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ', 'จำนวน', 'ร้อยละ']]) +
     '<tbody>' + AGES.map(a => {
       const t = A[a], n = t.quality;
-      return `<tr><th>${L[a]}</th>` + cnp(t.needFluoride, n) + cnp(t.needSealant, n) +
+      return `<tr><th>${L[a]}${covWarn(A[a])}</th>` + cnp(t.needFluoride, n) + cnp(t.needSealant, n) +
         cnp(t.needFilling, n) + cnp(t.needExtract, n) + cnp(t.needScaling, n) +
         cell(fmt(n), 'num') + '</tr>';
     }).join('') + '</tbody>';
@@ -1141,7 +1221,8 @@ function exportCsv() {
     : $('fAmp').value ? 'อำเภอ' + $('fAmp').value : 'ทั้งจังหวัด';
   rows.push(['ขอบเขต', scope]);
   rows.push([DATA.customPeriod ? 'ช่วงเวลาที่กำหนด' : 'ปีงบประมาณ', DATA.customPeriod ? '' : DATA.fiscalYear, DATA.fyStart + ' ถึง ' + DATA.fyEnd]);
-  rows.push(['เกณฑ์ร้อยละการตรวจของหน่วยบริการ', COV_MIN > 0 ? `ตั้งแต่ ${COV_MIN}% (ใช้กับตารางที่ 2–7)` : 'ไม่กำหนด']);
+  rows.push(['เกณฑ์ร้อยละการตรวจ', COV_MIN > 0 ? `ตั้งแต่ ${COV_MIN}% (ใช้กับตารางที่ 2–7)` : 'ไม่กำหนด',
+    COV_MODE === 'level' ? 'ภาพรวมระดับที่เลือก (นับทุกหน่วย เตือนถ้าต่ำกว่าเกณฑ์)' : 'รายหน่วยบริการ (ตัดหน่วยที่ต่ำกว่าเกณฑ์)']);
   rows.push(['วันที่สร้างรายงาน', DATA.generatedAt]);
   rows.push([]);
 
@@ -1245,14 +1326,14 @@ function mainProvince() {
 }
 function exportRegion() {
   const pv = mainProvince(), L = DATA.ageLabel;
-  const header = ['จังหวัด', 'ปีงบประมาณ', 'ช่วงเริ่มต้น', 'ช่วงสิ้นสุด', 'วันที่ตรวจล่าสุด', 'เกณฑ์ร้อยละการตรวจของหน่วยบริการ',
+  const header = ['จังหวัด', 'ปีงบประมาณ', 'ช่วงเริ่มต้น', 'ช่วงสิ้นสุด', 'วันที่ตรวจล่าสุด', 'เกณฑ์ร้อยละการตรวจ', 'วิธีใช้เกณฑ์',
     'กลุ่มอายุ', 'จำนวนหน่วยบริการ', 'หน่วยบริการที่ไม่ผ่านเกณฑ์ร้อยละการตรวจ',
     ...REGION_COLS.map(c => c[1]), 'เวอร์ชันโปรแกรม', 'วันที่สร้าง'];
   const rows = [header];
   AGES.forEach(a => {
     const t = PROV[a];
     const units = new Set(DATA.records.filter(r => r.age === a && r.total > 0).map(r => r.hoscode)).size;
-    rows.push([pv, DATA.customPeriod ? '' : DATA.fiscalYear, DATA.fyStart, DATA.fyEnd, DATA.latestServe, COV_MIN, L[a], units, t.unitsOut,
+    rows.push([pv, DATA.customPeriod ? '' : DATA.fiscalYear, DATA.fyStart, DATA.fyEnd, DATA.latestServe, COV_MIN, COV_MODE === 'level' ? 'ภาพรวมระดับ' : 'รายหน่วยบริการ', L[a], units, t.unitsOut,
       ...REGION_COLS.map(c => Math.round((t[c[0]] || 0) * 100) / 100),
       DATA.version || '', DATA.generatedAt]);
   });
@@ -1262,7 +1343,7 @@ function exportRegion() {
   }).join(',')).join('\r\n');
   const el = document.createElement('a');
   el.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  el.download = `รวมเขต_สภาวะช่องปาก_${pv}_${DATA.customPeriod ? DATA.fyStart + '_' + DATA.fyEnd : 'ปีงบ' + DATA.fiscalYear}_เกณฑ์${COV_MIN}.csv`;
+  el.download = `รวมเขต_สภาวะช่องปาก_${pv}_${DATA.customPeriod ? DATA.fyStart + '_' + DATA.fyEnd : 'ปีงบ' + DATA.fiscalYear}_เกณฑ์${COV_MIN}${COV_MODE === 'level' ? 'ระดับ' : ''}.csv`;
   el.click();
   URL.revokeObjectURL(el.href);
 }
@@ -1278,8 +1359,16 @@ fillHos();
 $('fAmp').onchange = () => { fillHos(); render(); };
 $('fHos').onchange = render;
 $('btnReset').onclick = () => { $('fAmp').value = ''; fillHos(); render(); };
+$('btnRules').onclick = () => {
+  const box = $('rules1'), open = box.style.display === 'none';
+  box.style.display = open ? '' : 'none';
+  $('btnRules').textContent = open ? 'ซ่อนเงื่อนไข' : 'เงื่อนไขเกณฑ์คุณภาพ';
+};
+$('rulesScope').innerHTML = `ช่วงเวลาที่คำนวณ: <b>${periodText()}</b> (${beDate(DATA.fyStart)} – ${beDate(DATA.fyEnd)})`;
 $('fCov').value = String(COV_MIN);          // กันเบราว์เซอร์คืนค่าเดิมของช่องเลือกเมื่อโหลดซ้ำ
 $('fCov').onchange = () => { COV_MIN = +$('fCov').value; recomputeRefs(); render(); };
+$('fCovMode').value = COV_MODE;
+$('fCovMode').onchange = () => { COV_MODE = $('fCovMode').value; recomputeRefs(); render(); };
 $('btnCsv').onclick = exportCsv;
 $('btnRegion').onclick = exportRegion;
 $('btnAllCharts').onclick = () => {

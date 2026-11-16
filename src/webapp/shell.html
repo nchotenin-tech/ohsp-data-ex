@@ -114,6 +114,15 @@ table.dqsum th,table.dqsum td{padding:7px 14px;border-bottom:1px solid var(--lin
 table.dqsum th:first-child,table.dqsum td:first-child{text-align:left}
 table.dqsum th{font-size:12px;color:var(--muted);background:#f8fafc}
 table.dqsum td.bad{color:var(--err);font-weight:700}
+.dqrules{margin-top:12px;background:#fff;border-radius:12px;padding:10px 14px;box-shadow:0 1px 3px rgba(15,23,42,.08)}
+.dqrules summary{cursor:pointer;font-weight:700;color:var(--primary-d)}
+.dqrules .rtbl{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:8px}
+.dqrules .rtbl th,.dqrules .rtbl td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+.dqrules .rtbl thead th{background:#f1f5f9;font-size:12.5px}
+.dqrules ol{margin:0;padding-left:18px}
+.dqrules code{background:#eef2f5;border-radius:4px;padding:0 4px;font-size:12.5px}
+.dqrules .rsub{font-weight:400;font-size:12px;color:var(--muted)}
+.dqrules .rnote{font-size:12.5px;color:var(--muted);margin:6px 0}
 .vbar button:disabled{opacity:.45;cursor:not-allowed}
 
 /* ---------- ช่วงเวลา ---------- */
@@ -323,6 +332,7 @@ details.help li{margin:4px 0}
     <p class="sub" style="margin:12px 0 6px">รายการที่<b>ตรวจฟันในช่วงเวลาที่คำนวณ</b>แล้ว แต่ไม่ถูกนับเพราะไม่ผ่านเกณฑ์คุณภาพ:
       ผู้ตรวจต้องเป็นทันตบุคลากร (providertype 02 ทันตแพทย์ หรือ 06 ทันตาภิบาล) และจำนวนฟันต้องอยู่ในพิสัยตามกลุ่มอายุ</p>
     <table class="dqsum" id="dqSum"></table>
+    <details class="dqrules" id="dqRules"><summary>ดูเงื่อนไขเกณฑ์คุณภาพแบบละเอียดของแต่ละกลุ่มอายุ</summary><div id="dqRulesBody"></div></details>
     <div class="dqfil">
       <label>กลุ่มอายุ <select id="dqAge"></select></label>
       <label>อำเภอ <select id="dqAmp"></select></label>
