@@ -503,7 +503,7 @@ function rangeReasons(age, v) {
 /**
  * @param issues ถ้าส่ง array มา จะเก็บรายการที่ตรวจในปีงบแต่ไม่ผ่านเกณฑ์คุณภาพลงไป (มีข้อมูลระบุตัวบุคคล)
  */
-function summarise(files, hospitals, version, appName, issues) {
+function summarise(files, hospitals, version, appName, issues, period) {
   const C = {};
   KEEP_COLS.forEach((c, i) => (C[c] = i));
 
@@ -515,9 +515,18 @@ function summarise(files, hospitals, version, appName, issues) {
   if (latest === null) throw new UserError('ไม่พบผู้ที่ได้รับการตรวจฟันเลยในข้อมูลชุดนี้', [
     'ทุกรายการมีคอลัมน์ date_serv ว่าง หมายความว่ายังไม่มีใครได้รับการตรวจ',
     'กรุณาตรวจสอบว่าส่งออกข้อมูลจาก HDC ถูกช่วงเวลาหรือไม่']);
-  const year = parseInt(latest.slice(0, 4), 10), month = parseInt(latest.slice(5, 7), 10);
-  const endYear = month >= 10 ? year + 1 : year;
-  const fyBE = endYear + 543, fyStart = `${endYear - 1}-10-01`, fyEnd = `${endYear}-09-30`;
+  let fyBE, fyStart, fyEnd;
+  const custom = !!(period && period.start && period.end);
+  if (custom) {
+    // ช่วงเวลาที่ผู้ใช้กำหนดเอง (YYYY-MM-DD ค.ศ.) ปีงบที่แสดงคิดจากวันสิ้นสุด
+    fyStart = period.start; fyEnd = period.end;
+    const ey = parseInt(fyEnd.slice(0, 4), 10), em = parseInt(fyEnd.slice(5, 7), 10);
+    fyBE = (em >= 10 ? ey + 1 : ey) + 543;
+  } else {
+    const year = parseInt(latest.slice(0, 4), 10), month = parseInt(latest.slice(5, 7), 10);
+    const endYear = month >= 10 ? year + 1 : year;
+    fyBE = endYear + 543; fyStart = `${endYear - 1}-10-01`; fyEnd = `${endYear}-09-30`;
+  }
 
   const buckets = new Map();
   const units = {};
@@ -668,6 +677,7 @@ function summarise(files, hospitals, version, appName, issues) {
     generatedAt: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`,
     rowsTotal,
     fiscalYear: fyBE,
+    ...(custom ? { customPeriod: true } : {}),
     fyStart,
     fyEnd,
     latestServe: latest,
@@ -731,7 +741,7 @@ if (inWorker || root.__OHSP_FAKE_WORKER__) {
         const order = (a, b) => AGE_ORDER.indexOf(a.age) - AGE_ORDER.indexOf(b.age) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
         const files = msg.files.filter(f => store.has(f.id)).map(f => ({ ...f, parsed: store.get(f.id) })).sort(order);
         const issues = [];
-        const summary = summarise(files, HOSP, msg.version, msg.appName, issues);
+        const summary = summarise(files, HOSP, msg.version, msg.appName, issues, msg.period);
         post({ id, type: 'summary', summary, issues });
       }
     } catch (e) {

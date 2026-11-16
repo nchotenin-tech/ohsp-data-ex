@@ -61,6 +61,7 @@ select:focus{outline:2px solid var(--primary-l);border-color:var(--primary)}
   font-family:inherit;font-size:13.5px;cursor:pointer;color:var(--text)}
 .btn:hover{background:#f1f5f9}
 .scope{margin-left:auto;font-size:13px;color:var(--muted);text-align:right;line-height:1.4}
+.covnote{font-size:13px;color:#475569;background:#f0fdfa;border:1px solid #ccfbf1;border-radius:10px;padding:8px 12px;margin:0 0 12px;line-height:1.55}
 .scope b{color:var(--primary);font-size:14px}
 
 /* ---------- เนื้อหา ---------- */
@@ -236,6 +237,15 @@ tr.total th,tr.total td{background:#f1f5f9;font-weight:700}
         <select id="fHos"></select>
       </div>
       <div class="field">
+        <label for="fCov" title="ผลลัพธ์ (การ์ด ตาราง 2–7 สรุปรายอำเภอ) ใช้เฉพาะหน่วยบริการที่ตรวจฟันได้ตั้งแต่ร้อยละนี้ของประชากรในกลุ่มอายุ">เกณฑ์ร้อยละการตรวจของหน่วยบริการ</label>
+        <select id="fCov" autocomplete="off">
+          <option value="0">ไม่กำหนด (ทุกหน่วย)</option>
+          <option value="30">ตั้งแต่ 30%</option><option value="40">ตั้งแต่ 40%</option>
+          <option value="50" selected>ตั้งแต่ 50%</option><option value="60">ตั้งแต่ 60%</option>
+          <option value="70">ตั้งแต่ 70%</option><option value="80">ตั้งแต่ 80%</option>
+        </select>
+      </div>
+      <div class="field">
         <label>&nbsp;</label>
         <button class="btn" id="btnReset">ล้างตัวกรอง</button>
       </div>
@@ -244,6 +254,7 @@ tr.total th,tr.total td{background:#f1f5f9;font-weight:700}
 
     <div class="wrap">
       <section id="sec-kpi" style="margin-top:0;background:none;border:0;box-shadow:none;padding:0">
+        <div class="covnote" id="covnote"></div>
         <div class="kpis" id="kpis"></div>
       </section>
 
@@ -258,7 +269,7 @@ tr.total th,tr.total td{background:#f1f5f9;font-weight:700}
         <div class="ampleg">
           <span>สีเทียบกันภายในคอลัมน์ <span class="grad"></span> ดีกว่า</span>
           <span><b style="color:#d97706">★</b> ดีที่สุดของคอลัมน์</span>
-          <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#f1f5f9;border:1px solid #e2e8f0;vertical-align:-1px"></span> ฐานน้อยกว่า 30 คน ไม่นำมาจัดอันดับ</span>
+          <span><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#f1f5f9;border:1px solid #e2e8f0;vertical-align:-1px"></span> ไม่มีข้อมูล</span>
         </div>
         <div class="ins" id="iAmp"></div>
       </section>
@@ -267,7 +278,7 @@ tr.total th,tr.total td{background:#f1f5f9;font-weight:700}
         <div class="shead">
           <div>
             <h2>ตารางที่ 1 คุณภาพของข้อมูลการตรวจ แยกรายกลุ่มอายุ</h2>
-            <p class="note">จำนวนที่ตรวจ = มีวันที่ให้บริการในปีงบประมาณ · ผ่านเกณฑ์คุณภาพ = ผู้ตรวจเป็นทันตแพทย์/ทันตาภิบาล (02, 06) และจำนวนฟันอยู่ในพิสัยที่กำหนด</p>
+            <p class="note">จำนวนที่ตรวจ = มีวันที่ให้บริการในปีงบประมาณ (หรือช่วงเวลาที่เลือก) · ผ่านเกณฑ์คุณภาพ = ผู้ตรวจเป็นทันตแพทย์/ทันตาภิบาล (02, 06) และจำนวนฟันอยู่ในพิสัยที่กำหนด</p>
           </div>
           <button class="chartbtn" data-chart="1">แสดงกราฟ</button>
         </div>
@@ -402,23 +413,39 @@ function currentCodes() {
   if (hos) return new Set([hos]);
   return new Set(DATA.units.filter(u => !amp || u.ampname === amp).map(u => u.hoscode));
 }
+/* เกณฑ์ร้อยละการตรวจฟันของหน่วยบริการ: ผลลัพธ์ (การ์ด ตาราง 2–7 สรุปรายอำเภอ) ใช้เฉพาะหน่วยบริการ-กลุ่มอายุ
+   ที่ตรวจได้ตั้งแต่เกณฑ์นี้ขึ้นไป ส่วนความครอบคลุมและคุณภาพข้อมูล (ตารางที่ 1) นับทุกหน่วยบริการ */
+let COV_MIN = 50;
+const COV_FIELDS = ['total', 'examined', 'examinedOther', 'failProvider', 'failRange'];
+const covOk = r => COV_MIN <= 0 || (r.total > 0 && r.examined / r.total * 100 >= COV_MIN - 1e-9);
 function aggregateFor(codes) {
   const out = {};
-  AGES.forEach(a => { out[a] = {}; FIELDS.forEach(f => out[a][f] = 0); });
+  AGES.forEach(a => {
+    out[a] = {}; FIELDS.forEach(f => out[a][f] = 0);
+    out[a].qualityAll = 0; out[a].units = 0; out[a].unitsOut = 0;
+  });
   DATA.records.forEach(r => {
     if (!codes.has(r.hoscode)) return;
     const t = out[r.age];
-    if (t) FIELDS.forEach(f => t[f] += (r[f] || 0));
+    if (!t) return;
+    t.qualityAll += r.quality || 0;
+    if (r.total > 0) t.units++;
+    if (covOk(r)) FIELDS.forEach(f => t[f] += (r[f] || 0));
+    else { COV_FIELDS.forEach(f => t[f] += (r[f] || 0)); if (r.total > 0) t.unitsOut++; }
   });
   return out;
 }
 function aggregate() { return aggregateFor(currentCodes()); }
 
 /* ค่าอ้างอิงระดับจังหวัด และรายอำเภอ ใช้เปรียบเทียบในกล่องข้อสังเกต */
-const PROV = aggregateFor(new Set(DATA.units.map(u => u.hoscode)));
-const AMPAGG = {};
-AMPS.forEach(a => AMPAGG[a] = aggregateFor(
-  new Set(DATA.units.filter(u => u.ampname === a).map(u => u.hoscode))));
+let PROV, AMPAGG;
+function recomputeRefs() {
+  PROV = aggregateFor(new Set(DATA.units.map(u => u.hoscode)));
+  AMPAGG = {};
+  AMPS.forEach(a => AMPAGG[a] = aggregateFor(
+    new Set(DATA.units.filter(u => u.ampname === a).map(u => u.hoscode))));
+}
+recomputeRefs();
 
 /* ---------------- ตัวสร้างกราฟแท่ง (SVG ล้วน ไม่ต้องใช้ไลบรารี) ---------------- */
 function barChart(spec) {
@@ -499,7 +526,7 @@ function chartSpec(no, A) {
         { name: 'ร้อยละที่ได้รับการตรวจฟัน (จากประชากรทั้งหมด)', color: '--c2',
           values: AGES.map(a => pctN(A[a].examined, A[a].total)) },
         { name: 'ร้อยละผ่านเกณฑ์คุณภาพ (จากผู้ที่ตรวจ)', color: '--c1',
-          values: AGES.map(a => pctN(A[a].quality, A[a].examined)) },
+          values: AGES.map(a => pctN(A[a].qualityAll, A[a].examined)) },
       ]};
     case 2: return {
       groups: g(AGES), decimals: 1, unit: 'ร้อยละ', max: 100, height: 310,
@@ -575,7 +602,7 @@ function drawCharts(A) {
 }
 
 /* ---------------- เครื่องมือวิเคราะห์ข้อสังเกต ---------------- */
-const MIN_N = 30;                                  // ฐานน้อยกว่านี้ ไม่สรุปเป็นร้อยละ
+const MIN_N = 1;                                   // ไม่มีเกณฑ์จำนวนขั้นต่ำ (ใช้แค่กันการหารด้วยศูนย์)
 const sumAll = (A, k) => AGES.reduce((s, a) => s + A[a][k], 0);
 const ageLbl = () => DATA.ageLabel;
 
@@ -635,7 +662,7 @@ function insights(no, A) {
       + `${byCov[byCov.length - 1].v.toFixed(1)}%`);
 
     const byQ = AGES.filter(a => A[a].examined >= MIN_N)
-      .map(a => ({ a, v: pctN(A[a].quality, A[a].examined) })).sort((x, y) => x.v - y.v);
+      .map(a => ({ a, v: pctN(A[a].qualityAll, A[a].examined) })).sort((x, y) => x.v - y.v);
     if (byQ.length) {
       const w = byQ[0], t = A[w.a];
       if (w.v >= 90) {
@@ -653,7 +680,7 @@ function insights(no, A) {
 
     const other = sumAll(A, 'examinedOther'), inFy = sumAll(A, 'examined');
     if (other > inFy * 0.2)
-      push('info', `มีการตรวจนอกปีงบประมาณ ${fmt(other)} รายการ ซึ่งไม่ถูกนำมาคำนวณ `
+      push('info', `มีการตรวจนอก${DATA.customPeriod ? 'ช่วงเวลาที่เลือก' : 'ปีงบประมาณ'} ${fmt(other)} รายการ ซึ่งไม่ถูกนำมาคำนวณ `
         + `คิดเป็น ${(other / (other + inFy) * 100).toFixed(0)}% ของการตรวจทั้งหมดที่พบในไฟล์`);
   }
 
@@ -852,7 +879,7 @@ function renderAmp() {
   const rows = ampRows(), sel = $('fAmp').value || (UNIT[$('fHos').value] || {}).ampname;
   const ok = (r, a) => r[a].n >= MIN_N;
 
-  /* ช่วงค่าและค่าดีที่สุด ของแต่ละคอลัมน์ (เฉพาะอำเภอที่ฐาน ≥ 30) */
+  /* ช่วงค่าและค่าดีที่สุด ของแต่ละคอลัมน์ (เฉพาะอำเภอที่มีข้อมูล) */
   const rng = {};
   AMP_AGES.forEach(a => ['cf', 'dmf'].forEach(m => {
     const vs = rows.filter(r => ok(r, a)).map(r => r[a][m]);
@@ -878,7 +905,7 @@ function renderAmp() {
     const txt = m === 'cf' ? v.toFixed(1) + '%' : v.toFixed(2);
     const nn = `<div class="nn">n=${fmt(s.n)}</div>`;
     if (!isTotal && !ok(r, a))
-      return `<td class="tile"><div class="tl low" title="ฐานน้อยกว่า ${MIN_N} คน"><div class="v">${txt}</div>${nn}</div></td>`;
+      return `<td class="tile"><div class="tl low" title="ไม่มีข้อมูล"><div class="v">${txt}</div>${nn}</div></td>`;
     const R = rng[a + m];
     let bg = '#eef4f4', star = '';
     if (!isTotal && R) {
@@ -915,14 +942,14 @@ function renderAmp() {
     else ampSort = { key, dir: key === 'name' || key.endsWith('|dmf') ? 1 : -1 };
     renderAmp();
   });
-  $('ampTitle').textContent = `สรุปภาพรวมรายอำเภอ (ผลงานปีงบประมาณ ${DATA.fiscalYear})`;
+  $('ampTitle').textContent = `สรุปภาพรวมรายอำเภอ (ผลงาน${periodText()})`;
 
   /* ข้อสังเกต */
   const out = [], Lb = DATA.ageLabel;
   AMP_AGES.forEach(a => {
     const list = rows.filter(r => ok(r, a));
     if (list.length < 2) {
-      out.push(li('info', `อายุ ${Lb[a]} ปี มีอำเภอที่ฐานข้อมูลตั้งแต่ ${MIN_N} คนขึ้นไปไม่ถึง 2 อำเภอ จึงยังไม่เปรียบเทียบ`));
+      out.push(li('info', `อายุ ${Lb[a]} ปี มีอำเภอที่มีข้อมูลไม่ถึง 2 อำเภอ จึงยังไม่เปรียบเทียบ`));
       return;
     }
     const by = [...list].sort((x, y) => y[a].cf - x[a].cf);
@@ -935,7 +962,9 @@ function renderAmp() {
       + `${above} จาก ${list.length} อำเภอ อยู่ที่หรือสูงกว่าภาพรวมจังหวัด (${p == null ? '-' : p.toFixed(1) + '%'})`));
   });
   const low = AMP_AGES.reduce((s, a) => s + rows.filter(r => r[a].n > 0 && !ok(r, a)).length, 0);
-  if (low) out.push(li('warn', `มี ${low} ช่องที่ฐานข้อมูลน้อยกว่า ${MIN_N} คน แสดงเป็นสีเทาและไม่นำมาจัดอันดับ ควรแปลผลด้วยความระมัดระวัง`));
+  const small = AMP_AGES.reduce((s, a) => s + rows.filter(r => r[a].n > 0 && r[a].n < 30).length, 0);
+  if (small) out.push(li('info', `มี ${small} ช่องที่ฐานน้อยกว่า 30 คน ร้อยละอาจแกว่งมาก ควรดูค่า n ประกอบการแปลผล`));
+  if (COV_MIN > 0) out.push(li('info', `ผลลัพธ์รายอำเภอคำนวณเฉพาะหน่วยบริการที่ตรวจฟันได้ตั้งแต่ ${COV_MIN}% ของประชากรในกลุ่มอายุนั้น`));
   $('iAmp').innerHTML = '<h3>ข้อสังเกตจากข้อมูล</h3><ul>'
     + out.map(x => `<li class="${x.kind}">${x.html}</li>`).join('') + '</ul>';
 }
@@ -983,7 +1012,8 @@ function kpiCard(a, t) {
         <div><div class="kage">อายุ ${DATA.ageLabel[a]} ปี</div>
         <span class="kpill${isOld ? ' func' : ''}">${lab}</span></div></div>
       <div class="val">${pct(num, n)}${n ? '%' : ''}</div>
-      <div class="sub">${desc} <b>${fmt(num)}</b> จาก ${fmt(n)} คนที่ผ่านเกณฑ์คุณภาพ</div>
+      <div class="sub">${!n && t.unitsOut ? `ไม่มีหน่วยบริการที่ตรวจได้ถึง ${COV_MIN}% (ปรับเกณฑ์ได้ที่แถบด้านบน)`
+        : `${desc} <b>${fmt(num)}</b> จาก ${fmt(n)} คนที่ผ่านเกณฑ์คุณภาพ`}</div>
       <div class="bar" style="margin:8px 0 2px"><i style="width:${v}%"></i></div>
       ${covBlock(t, cov)}</div>`;
 }
@@ -1005,6 +1035,14 @@ function render() {
     : amp ? `<b>อำเภอ${amp}</b><br>${codes.size} หน่วยบริการ`
           : `<b>ทั้งจังหวัด</b><br>${codes.size} หน่วยบริการ`;
 
+  /* หมายเหตุเกณฑ์ร้อยละการตรวจของหน่วยบริการ */
+  const outs = AGES.filter(a => A[a].unitsOut > 0).map(a => `อายุ ${L[a]} ปี ${fmt(A[a].unitsOut)} จาก ${fmt(A[a].units)} แห่ง`);
+  $('covnote').innerHTML = COV_MIN <= 0
+    ? 'ผลลัพธ์คำนวณจาก<b>ทุกหน่วยบริการ</b> (ไม่กำหนดเกณฑ์ร้อยละการตรวจ)'
+    : `ผลลัพธ์ (การ์ด ตารางที่ 2–7 และสรุปรายอำเภอ) คำนวณเฉพาะหน่วยบริการที่<b>ตรวจฟันได้ตั้งแต่ ${COV_MIN}%</b> ของประชากรในกลุ่มอายุนั้น · `
+      + (outs.length ? `ไม่นำมาคำนวณ: ${outs.join(' · ')}` : 'ทุกหน่วยบริการผ่านเกณฑ์')
+      + ' · ความครอบคลุมและคุณภาพข้อมูล (ตารางที่ 1) นับทุกหน่วยบริการ';
+
   /* การ์ดสรุป */
   const T = {}; ['total', 'examined'].forEach(k => T[k] = tot(k));
   $('kpis').innerHTML = AGES.map(a => kpiCard(a, A[a])).join('') +
@@ -1022,15 +1060,15 @@ function render() {
     '<tbody>' + AGES.map(a => {
       const t = A[a];
       return `<tr><th>${L[a]}</th>` + cell(fmt(t.total), 'num') + cnp(t.examined, t.total) +
-        cnp(t.quality, t.examined) +
-        `<td><div class="bar"><i style="width:${t.examined ? t.quality / t.examined * 100 : 0}%"></i></div></td></tr>`;
+        cnp(t.qualityAll, t.examined) +
+        `<td><div class="bar"><i style="width:${t.examined ? t.qualityAll / t.examined * 100 : 0}%"></i></div></td></tr>`;
     }).join('') +
     `<tr class="total"><th>รวม</th>${cell(fmt(tot('total')), 'num')}${cnp(tot('examined'), tot('total'))}` +
-    `${cnp(tot('quality'), tot('examined'))}<td></td></tr></tbody>`;
+    `${cnp(tot('qualityAll'), tot('examined'))}<td></td></tr></tbody>`;
   $('dq1').textContent =
     `ไม่ผ่านเกณฑ์เพราะผู้ตรวจไม่ใช่ทันตแพทย์/ทันตาภิบาล ${fmt(tot('failProvider'))} คน · ` +
     `เพราะจำนวนฟันอยู่นอกพิสัยที่กำหนด ${fmt(tot('failRange'))} คน · ` +
-    `ไม่นับเพราะตรวจนอกปีงบประมาณ ${fmt(tot('examinedOther'))} รายการ`;
+    `ไม่นับเพราะตรวจนอก${DATA.customPeriod ? 'ช่วงเวลาที่เลือก' : 'ปีงบประมาณ'} ${fmt(tot('examinedOther'))} รายการ`;
 
   /* ตารางที่ 2 */
   $('t2').innerHTML = head([
@@ -1102,14 +1140,15 @@ function exportCsv() {
   const scope = $('fHos').value ? UNIT[$('fHos').value].hosname
     : $('fAmp').value ? 'อำเภอ' + $('fAmp').value : 'ทั้งจังหวัด';
   rows.push(['ขอบเขต', scope]);
-  rows.push(['ปีงบประมาณ', DATA.fiscalYear, DATA.fyStart + ' ถึง ' + DATA.fyEnd]);
+  rows.push([DATA.customPeriod ? 'ช่วงเวลาที่กำหนด' : 'ปีงบประมาณ', DATA.customPeriod ? '' : DATA.fiscalYear, DATA.fyStart + ' ถึง ' + DATA.fyEnd]);
+  rows.push(['เกณฑ์ร้อยละการตรวจของหน่วยบริการ', COV_MIN > 0 ? `ตั้งแต่ ${COV_MIN}% (ใช้กับตารางที่ 2–7)` : 'ไม่กำหนด']);
   rows.push(['วันที่สร้างรายงาน', DATA.generatedAt]);
   rows.push([]);
 
   rows.push(['ตารางที่ 1 คุณภาพของข้อมูลการตรวจ']);
   rows.push(['อายุ', 'ประชากรทั้งหมด', 'จำนวนที่ตรวจ', 'ร้อยละที่ตรวจ', 'ผ่านเกณฑ์คุณภาพ', 'ร้อยละ']);
   AGES.forEach(a => rows.push([L[a], A[a].total, A[a].examined,
-    pct(A[a].examined, A[a].total), A[a].quality, pct(A[a].quality, A[a].examined)]));
+    pct(A[a].examined, A[a].total), A[a].qualityAll, pct(A[a].qualityAll, A[a].examined)]));
   rows.push([]);
 
   rows.push(['ตารางที่ 2 ร้อยละผู้ปราศจากฟันผุและมีประสบการณ์ฟันผุ']);
@@ -1183,7 +1222,8 @@ function exportCsv() {
    ร้อยละและค่าเฉลี่ยระดับเขตให้คำนวณใหม่จากผลรวม (ห้ามเฉลี่ยร้อยละของแต่ละจังหวัด)
    ไม่ขึ้นกับตัวกรอง ส่งออกทั้งจังหวัดเสมอ และไม่มีข้อมูลรายบุคคล */
 const REGION_COLS = [
-  ['total', 'ประชากรทั้งหมด'], ['examined', 'ได้รับการตรวจในปีงบ'], ['quality', 'ผ่านเกณฑ์คุณภาพ'],
+  ['total', 'ประชากรทั้งหมด'], ['examined', 'ได้รับการตรวจในช่วงเวลา'], ['qualityAll', 'ผ่านเกณฑ์คุณภาพ_ทุกหน่วยบริการ'],
+  ['quality', 'ผ่านเกณฑ์คุณภาพ_หน่วยบริการที่ผ่านเกณฑ์ร้อยละการตรวจ'],
   ['failProvider', 'ไม่ผ่าน_ผู้ตรวจ'], ['failRange', 'ไม่ผ่าน_พิสัยจำนวนฟัน'],
   ['cariesFree', 'ปราศจากฟันผุ'], ['cariesUntreated', 'มีฟันผุไม่ได้รักษา'], ['extracted', 'มีฟันถอน'],
   ['filled', 'มีฟันอุด'], ['dmftAny', 'มีประสบการณ์ฟันผุ'],
@@ -1205,13 +1245,14 @@ function mainProvince() {
 }
 function exportRegion() {
   const pv = mainProvince(), L = DATA.ageLabel;
-  const header = ['จังหวัด', 'ปีงบประมาณ', 'วันที่ตรวจล่าสุด', 'กลุ่มอายุ', 'จำนวนหน่วยบริการ',
+  const header = ['จังหวัด', 'ปีงบประมาณ', 'ช่วงเริ่มต้น', 'ช่วงสิ้นสุด', 'วันที่ตรวจล่าสุด', 'เกณฑ์ร้อยละการตรวจของหน่วยบริการ',
+    'กลุ่มอายุ', 'จำนวนหน่วยบริการ', 'หน่วยบริการที่ไม่ผ่านเกณฑ์ร้อยละการตรวจ',
     ...REGION_COLS.map(c => c[1]), 'เวอร์ชันโปรแกรม', 'วันที่สร้าง'];
   const rows = [header];
   AGES.forEach(a => {
     const t = PROV[a];
     const units = new Set(DATA.records.filter(r => r.age === a && r.total > 0).map(r => r.hoscode)).size;
-    rows.push([pv, DATA.fiscalYear, DATA.latestServe, L[a], units,
+    rows.push([pv, DATA.customPeriod ? '' : DATA.fiscalYear, DATA.fyStart, DATA.fyEnd, DATA.latestServe, COV_MIN, L[a], units, t.unitsOut,
       ...REGION_COLS.map(c => Math.round((t[c[0]] || 0) * 100) / 100),
       DATA.version || '', DATA.generatedAt]);
   });
@@ -1221,19 +1262,24 @@ function exportRegion() {
   }).join(',')).join('\r\n');
   const el = document.createElement('a');
   el.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  el.download = `รวมเขต_สภาวะช่องปาก_${pv}_ปีงบ${DATA.fiscalYear}.csv`;
+  el.download = `รวมเขต_สภาวะช่องปาก_${pv}_${DATA.customPeriod ? DATA.fyStart + '_' + DATA.fyEnd : 'ปีงบ' + DATA.fiscalYear}_เกณฑ์${COV_MIN}.csv`;
   el.click();
   URL.revokeObjectURL(el.href);
 }
 
 /* ---------------- เริ่มทำงาน ---------------- */
-const beDate = s => { const [y, m, d] = s.split('-'); return `${d}/${m}/${+y + 543}`; };
+const beDate = s => { const [y, m, d] = String(s).slice(0, 10).split('-'); return `${d}/${m}/${+y + 543}`; };
+function periodText() {
+  return DATA.customPeriod ? `ช่วง ${beDate(DATA.fyStart)} – ${beDate(DATA.fyEnd)}` : `ปีงบประมาณ ${DATA.fiscalYear}`;
+}
 
 fillAmp();
 fillHos();
 $('fAmp').onchange = () => { fillHos(); render(); };
 $('fHos').onchange = render;
 $('btnReset').onclick = () => { $('fAmp').value = ''; fillHos(); render(); };
+$('fCov').value = String(COV_MIN);          // กันเบราว์เซอร์คืนค่าเดิมของช่องเลือกเมื่อโหลดซ้ำ
+$('fCov').onchange = () => { COV_MIN = +$('fCov').value; recomputeRefs(); render(); };
 $('btnCsv').onclick = exportCsv;
 $('btnRegion').onclick = exportRegion;
 $('btnAllCharts').onclick = () => {
@@ -1265,13 +1311,14 @@ const spy = new IntersectionObserver(entries => {
 links.forEach(a => { const el = $(a.dataset.go); if (el) spy.observe(el); });
 links[0].classList.add('on');
 
-$('fytag').textContent = `ปีงบประมาณ ${DATA.fiscalYear}`;
+$('fytag').textContent = DATA.customPeriod ? 'ช่วงเวลาที่กำหนดเอง' : `ปีงบประมาณ ${DATA.fiscalYear}`;
 $('brandsub').textContent =
   `กลุ่มอายุ 3, 6, 12 ปี และ 60 ปีขึ้นไป · ${beDate(DATA.fyStart)} – ${beDate(DATA.fyEnd)}`;
 $('sidefoot').textContent = `ข้อมูล ${DATA.rowsTotal.toLocaleString('th-TH')} รายการ · ` +
   `สร้างเมื่อ ${DATA.generatedAt}` + (DATA.version ? ` · เวอร์ชัน ${DATA.version}` : '');
 $('footer').textContent =
-  `ปีงบประมาณกำหนดจากวันที่ตรวจล่าสุดในข้อมูล ${beDate(DATA.latestServe)} · ` +
+  (DATA.customPeriod ? `ช่วงเวลา ${beDate(DATA.fyStart)} – ${beDate(DATA.fyEnd)} กำหนดโดยผู้ใช้ · วันที่ตรวจล่าสุดในข้อมูล ${beDate(DATA.latestServe)} · `
+                      : `ปีงบประมาณกำหนดจากวันที่ตรวจล่าสุดในข้อมูล ${beDate(DATA.latestServe)} · `) +
   `แหล่งข้อมูล HDC Data Exchange การตรวจฟัน`;
 
 render();

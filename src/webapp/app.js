@@ -123,6 +123,28 @@ async function parseFile(f) {
   render();
 }
 
+/* ---------------- ช่วงเวลา ---------------- */
+const TH_MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const thDate = s => { const [y, m, d] = s.split('-').map(Number); return `${d} ${TH_MON[m - 1]} ${y + 543}`; };
+function getPeriod() {
+  const custom = document.querySelector('input[name=per]:checked').value === 'custom';
+  if (!custom) return { custom: false, ok: true };
+  const start = $('pStart').value, end = $('pEnd').value;
+  if (!start || !end) return { custom: true, ok: false, msg: 'กรุณาเลือกวันเริ่มต้นและวันสิ้นสุด' };
+  if (start > end) return { custom: true, ok: false, msg: 'วันเริ่มต้นต้องไม่เกินวันสิ้นสุด' };
+  return { custom: true, ok: true, start, end };
+}
+function renderPeriod() {
+  const p = getPeriod(), h = $('pHint');
+  h.classList.toggle('bad', !p.ok);
+  h.textContent = !p.custom ? '' : !p.ok ? p.msg : `นับการตรวจตั้งแต่ ${thDate(p.start)} ถึง ${thDate(p.end)} (รวมวันสิ้นสุด)`;
+}
+document.querySelectorAll('input[name=per]').forEach(r => r.addEventListener('change', () => { renderPeriod(); render(); }));
+['pStart', 'pEnd'].forEach(id => $(id).addEventListener('change', () => {
+  document.querySelector('input[name=per][value=custom]').checked = true; renderPeriod(); render();
+}));
+const periodLabel = s => (s.customPeriod ? `ช่วง ${thDate(s.fyStart)} – ${thDate(s.fyEnd)}` : `ปีงบประมาณ ${s.fiscalYear}`);
+
 function removeFile(id) {
   const i = files.findIndex(f => f.id === id);
   if (i < 0) return;
@@ -181,10 +203,12 @@ function render() {
   const ok = files.filter(f => f.status === 'ok');
   const noAge = ok.filter(f => !f.age);
   const go = $('go');
-  go.disabled = busy || !ok.length || noAge.length > 0;
+  const per = getPeriod();
+  go.disabled = busy || !ok.length || noAge.length > 0 || !per.ok;
   $('goHint').textContent = busy ? 'กำลังอ่านไฟล์ กรุณารอสักครู่…'
     : !ok.length ? 'เลือกไฟล์อย่างน้อย 1 ไฟล์ และระบุกลุ่มอายุให้ครบทุกไฟล์'
     : noAge.length ? `ยังไม่ได้ระบุกลุ่มอายุ ${noAge.length} ไฟล์ กรุณาเลือกในช่องกลุ่มอายุ`
+    : !per.ok ? `ช่วงเวลา: ${per.msg}`
     : `พร้อมแล้ว: ${ok.length} ไฟล์ รวม ${fmt(ok.reduce((s, f) => s + f.rows, 0))} แถว` +
       (files.some(f => f.status === 'err') ? ' (ไฟล์ที่อ่านไม่ได้จะไม่ถูกนำมาคำนวณ)' : '');
 }
@@ -259,7 +283,7 @@ function clearLast() { try { localStorage.removeItem(LAST_KEY); } catch (e) { /*
 function renderLastCard() {
   const o = loadLast();
   $('lastCard').classList.toggle('hidden', !o);
-  if (o) $('lastInfo').textContent = `ปีงบประมาณ ${o.summary.fiscalYear} · ${fmt(o.summary.rowsTotal)} รายการ · ` +
+  if (o) $('lastInfo').textContent = `${periodLabel(o.summary)} · ${fmt(o.summary.rowsTotal)} รายการ · ` +
     `${o.summary.units.length} หน่วยบริการ · สร้างเมื่อ ${o.summary.generatedAt}`;
 }
 
@@ -270,40 +294,104 @@ function buildReport(summary) {
   return html;
 }
 
+/** คำนวณจากไฟล์ที่อ่านไว้แล้ว คืน null ถ้าสำเร็จ หรือ {title, hints} ถ้าไม่สำเร็จ */
+async function generate(period) {
+  try {
+    const ok = files.filter(f => f.status === 'ok' && f.age);
+    if (!ok.length) return { title: 'ยังไม่มีไฟล์ข้อมูล', hints: ['กด “นำเข้าข้อมูลชุดใหม่” แล้วเลือกไฟล์ Excel'] };
+    const res = await call({ cmd: 'summarise', files: ok.map(f => ({ id: f.id, age: f.age, name: f.name })),
+                             hospitals: HOSP, version: APP.version, appName: APP.name, period });
+    const s = res.summary;
+    const sum = k => s.records.reduce((t, r) => t + r[k], 0);
+    const ex = sum('examined'), other = sum('examinedOther');
+    if (!ex) return { title: `ไม่พบผู้ที่ได้รับการตรวจฟันใน${periodLabel(s)}`,
+                      hints: [`มีผู้ได้รับการตรวจนอกช่วงนี้ ${fmt(other)} รายการ`, 'กรุณาตรวจสอบช่วงเวลาที่เลือก หรือช่วงเวลาที่ส่งออกข้อมูลจาก HDC'] };
+    ISSUES = res.issues || [];                 // มีข้อมูลระบุตัวบุคคล: เก็บในตัวแปรเท่านั้น
+    const unknown = s.unknownCodes;
+    delete s.unknownCodes;
+    const info = `${periodLabel(s)} · ${fmt(s.rowsTotal)} รายการ · ${s.units.length} หน่วยบริการ` +
+      (unknown ? ` · ${unknown} รหัสไม่พบในตารางหน่วยบริการ (จัดเป็น "ไม่ทราบอำเภอ")` : '');
+    const kept = saveLast(s, info);
+    showReport(s, info + (kept ? '' : ' · (เบราว์เซอร์จำรายงานนี้ไว้ไม่ได้ กรุณากดบันทึกเป็นไฟล์)'), true);
+    return null;
+  } catch (e) {
+    return { title: e.title || 'คำนวณไม่สำเร็จ', hints: e.hints || [String(e)] };
+  }
+}
+const periodArg = p => (p.custom && p.ok ? { start: p.start, end: p.end } : null);
+
 $('go').onclick = async () => {
   const go = $('go');
   go.disabled = true;
   go.textContent = 'กำลังคำนวณ…';
   showMsg('', '');
-  try {
-    const ok = files.filter(f => f.status === 'ok' && f.age);
-    const res = await call({ cmd: 'summarise', files: ok.map(f => ({ id: f.id, age: f.age, name: f.name })),
-                             hospitals: HOSP, version: APP.version, appName: APP.name });
-    const s = res.summary;
-    ISSUES = res.issues || [];                 // มีข้อมูลระบุตัวบุคคล: เก็บในตัวแปรเท่านั้น
-    const sum = k => s.records.reduce((t, r) => t + r[k], 0);
-    const ex = sum('examined'), other = sum('examinedOther');
-    if (!ex) {
-      showMsg('err', `ไม่พบผู้ที่ได้รับการตรวจฟันในปีงบประมาณ ${s.fiscalYear}`,
-        [`มีผู้ได้รับการตรวจนอกปีงบประมาณนี้ ${fmt(other)} รายการ`, 'กรุณาตรวจสอบช่วงเวลาที่ส่งออกข้อมูลจาก HDC']);
-      return;
-    }
-    const unknown = s.unknownCodes;
-    delete s.unknownCodes;
-    const info = `ปีงบประมาณ ${s.fiscalYear} · ${fmt(s.rowsTotal)} รายการ · ${s.units.length} หน่วยบริการ` +
-      (unknown ? ` · ${unknown} รหัสไม่พบในตารางหน่วยบริการ (จัดเป็น "ไม่ทราบอำเภอ")` : '');
-    const kept = saveLast(s, info);
-    showReport(s, info + (kept ? '' : ' · (เบราว์เซอร์จำรายงานนี้ไว้ไม่ได้ กรุณากดบันทึกเป็นไฟล์)'), true);
-  } catch (e) {
-    showMsg('err', e.title || 'คำนวณไม่สำเร็จ', e.hints || [String(e)]);
-  } finally {
-    go.textContent = 'สร้าง Dashboard';
-    render();
-  }
+  const err = await generate(periodArg(getPeriod()));
+  if (err) showMsg('err', err.title, err.hints);
+  go.textContent = 'สร้าง Dashboard';
+  render();
 };
+
+/* ---------------- เปลี่ยนช่วงเวลาจากหน้ารายงาน ---------------- */
+let CAN_RECALC = false, keepCov = null;
+function perState() {
+  const custom = document.querySelector('input[name=per2]:checked').value === 'custom';
+  if (!custom) return { custom: false, ok: true };
+  const start = $('p2Start').value, end = $('p2End').value;
+  if (!start || !end) return { custom: true, ok: false, msg: 'กรุณาเลือกวันเริ่มต้นและวันสิ้นสุด' };
+  if (start > end) return { custom: true, ok: false, msg: 'วันเริ่มต้นต้องไม่เกินวันสิ้นสุด' };
+  return { custom: true, ok: true, start, end };
+}
+function renderPerPop() {
+  const p = perState(), h = $('p2Hint');
+  h.className = 'sub' + (p.ok ? '' : ' bad');
+  h.textContent = !p.custom ? 'ใช้ปีงบประมาณล่าสุดที่พบในข้อมูล (1 ต.ค. – 30 ก.ย.)'
+    : !p.ok ? p.msg : `นับการตรวจตั้งแต่ ${thDate(p.start)} ถึง ${thDate(p.end)} (รวมวันสิ้นสุด)`;
+  $('p2Apply').disabled = !p.ok || !CAN_RECALC;
+}
+function openPerPop() {
+  const s = lastSummary;
+  document.querySelector(`input[name=per2][value=${s.customPeriod ? 'custom' : 'auto'}]`).checked = true;
+  $('p2Start').value = s.fyStart.slice(0, 10); $('p2End').value = s.fyEnd.slice(0, 10);
+  $('p2Msg').innerHTML = CAN_RECALC ? '' :
+    '<div class="msg warn" style="margin:10px 0 0">รายงานนี้เป็นรายงานที่เบราว์เซอร์จำไว้ ไม่มีไฟล์ข้อมูลในหน่วยความจำ ' +
+    'กด <b>นำเข้าข้อมูลชุดใหม่</b> เลือกไฟล์ แล้วกำหนดช่วงเวลาในขั้นที่ 2</div>';
+  renderPerPop();
+  $('perPop').classList.remove('hidden');
+}
+$('perBtn').onclick = () => ($('perPop').classList.contains('hidden') ? openPerPop() : $('perPop').classList.add('hidden'));
+$('p2Cancel').onclick = () => $('perPop').classList.add('hidden');
+document.querySelectorAll('input[name=per2]').forEach(r => r.addEventListener('change', renderPerPop));
+['p2Start', 'p2End'].forEach(id => $(id).addEventListener('change', () => {
+  document.querySelector('input[name=per2][value=custom]').checked = true; renderPerPop();
+}));
+$('p2Apply').onclick = async () => {
+  const p = perState(); if (!p.ok) return;
+  // ให้หน้าเลือกไฟล์ตรงกับที่เลือกที่นี่
+  document.querySelector(`input[name=per][value=${p.custom ? 'custom' : 'auto'}]`).checked = true;
+  if (p.custom) { $('pStart').value = p.start; $('pEnd').value = p.end; }
+  renderPeriod();
+  // คงเกณฑ์ร้อยละการตรวจที่ผู้ใช้เลือกไว้ในรายงานเดิม
+  try { keepCov = $('frame').contentDocument.getElementById('fCov').value; } catch (e) { keepCov = null; }
+  const btn = $('p2Apply'); btn.disabled = true; btn.textContent = 'กำลังคำนวณ…';
+  const err = await generate(periodArg(p));
+  btn.textContent = 'คำนวณใหม่';
+  if (err) { $('p2Msg').innerHTML = `<div class="msg err" style="margin:10px 0 0"><b>${esc(err.title)}</b>${(err.hints || []).map(esc).join('<br>')}</div>`; renderPerPop(); return; }
+  $('perPop').classList.add('hidden');
+};
+$('frame').addEventListener('load', () => {
+  if (keepCov == null) return;
+  try {
+    const sel = $('frame').contentDocument.getElementById('fCov');
+    if (sel && sel.value !== keepCov) { sel.value = keepCov; sel.dispatchEvent(new Event('change')); }
+  } catch (e) { /* ignore */ }
+  keepCov = null;
+});
 
 function showReport(s, info, withIssues) {
   if (!withIssues) ISSUES = null;
+  CAN_RECALC = !!withIssues;
+  $('perPop').classList.add('hidden');
+  $('perBtn').textContent = `ช่วงเวลา: ${periodLabel(s)} ▾`;
   const b = $('dqBtn');
   b.disabled = !ISSUES;
   b.textContent = ISSUES ? `ตรวจสอบคุณภาพข้อมูล (${fmt(ISSUES.length)})` : 'ตรวจสอบคุณภาพข้อมูล';
@@ -315,7 +403,7 @@ function showReport(s, info, withIssues) {
   $('vinfo').textContent = info;
   $('home').classList.add('hidden');
   $('viewer').classList.remove('hidden');
-  document.title = `Dashboard สภาวะช่องปาก ปีงบประมาณ ${s.fiscalYear}`;
+  document.title = `Dashboard สภาวะช่องปาก ${periodLabel(s)}`;
 }
 function openLast() {
   const o = loadLast();
@@ -326,6 +414,7 @@ $('clearLast').onclick = () => { clearLast(); renderLastCard(); };
 
 $('back').onclick = () => {
   renderLastCard();
+  $('perPop').classList.add('hidden');
   $('dqView').classList.add('hidden');
   $('viewer').classList.add('hidden');
   $('home').classList.remove('hidden');
@@ -360,7 +449,7 @@ function dqRenderSummary() {
     return `<tr><td>อายุ ${AGE_TXT2[a]}</td><td>${fmt(ex)}</td><td class="${bad ? 'bad' : ''}">${fmt(bad)}</td>` +
       `<td>${ex ? (bad / ex * 100).toFixed(1) : '0.0'}%</td><td>${fmt(fp)}</td><td>${fmt(fr)}</td></tr>`;
   });
-  $('dqSum').innerHTML = '<tr><th>กลุ่มอายุ</th><th>ตรวจในปีงบ</th><th>ไม่ผ่านเกณฑ์</th><th>ร้อยละ</th>' +
+  $('dqSum').innerHTML = '<tr><th>กลุ่มอายุ</th><th>ตรวจในช่วงเวลา</th><th>ไม่ผ่านเกณฑ์</th><th>ร้อยละ</th>' +
     '<th>ผู้ตรวจไม่ใช่ทันตบุคลากร</th><th>จำนวนฟันไม่อยู่ในพิสัย</th></tr>' + rows.join('');
 }
 function dqRender() {
@@ -382,7 +471,7 @@ function openDq() {
   fillSelect($('dqAmp'), [...new Set(ISSUES.map(r => r.ampname))].sort().map(a => [a, a]), 'ทุกอำเภอ');
   dqHosOptions();
   $('dqWhy').value = ''; $('dqQ').value = '';
-  $('dqInfo').textContent = `ปีงบประมาณ ${lastSummary.fiscalYear} · ${lastSummary.fyStart} ถึง ${lastSummary.fyEnd}`;
+  $('dqInfo').textContent = `${periodLabel(lastSummary)} · ${thDate(lastSummary.fyStart)} ถึง ${thDate(lastSummary.fyEnd)}`;
   dqRenderSummary(); dqRender();
   $('dqView').classList.remove('hidden');
 }
@@ -419,7 +508,7 @@ $('save').onclick = () => {
   const d = new Date(), p = n => String(n).padStart(2, '0');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([lastHtml], { type: 'text/html;charset=utf-8' }));
-  a.download = `Dashboardช่องปาก_ปีงบ${lastSummary.fiscalYear}_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}.html`;
+  a.download = `Dashboardช่องปาก_${lastSummary.customPeriod ? lastSummary.fyStart + '_' + lastSummary.fyEnd : 'ปีงบ' + lastSummary.fiscalYear}_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}.html`;
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);

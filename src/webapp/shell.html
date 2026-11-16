@@ -116,6 +116,19 @@ table.dqsum th{font-size:12px;color:var(--muted);background:#f8fafc}
 table.dqsum td.bad{color:var(--err);font-weight:700}
 .vbar button:disabled{opacity:.45;cursor:not-allowed}
 
+/* ---------- ช่วงเวลา ---------- */
+.period{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.period label{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;cursor:pointer}
+.period input[type=radio]{margin-top:5px;accent-color:var(--primary)}
+.period input[type=date]{font:inherit;font-size:14px;padding:4px 8px;border-radius:7px;border:1.5px solid var(--line);margin:0 4px}
+#pHint{margin:0 0 0 26px}
+#perPop{position:fixed;top:58px;left:14px;z-index:30;width:min(560px,calc(100vw - 28px));background:#fff;color:var(--text);
+  border-radius:14px;padding:16px 18px;box-shadow:0 10px 40px rgba(15,23,42,.25);border:1px solid var(--line)}
+#perPop .period{margin-top:8px}
+#p2Hint{margin:6px 0 0}
+#p2Hint.bad{color:var(--err)}
+#pHint.bad{color:var(--err)}
+
 /* ---------- รายงานที่จำไว้ ---------- */
 .last{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-left:5px solid #14b8a6}
 .lastbtns{display:flex;gap:10px;flex-wrap:wrap}
@@ -210,9 +223,20 @@ details.help li{margin:4px 0}
       <div id="notes"></div>
     </section>
 
+    <section class="card">
+      <h2>2. ช่วงเวลาของการตรวจฟันที่นำมาคำนวณ</h2>
+      <div class="period">
+        <label><input type="radio" name="per" value="auto" checked>
+          <span><b>ปีงบประมาณล่าสุดในข้อมูล</b> (อัตโนมัติ 1 ต.ค. – 30 ก.ย. ตามวันที่ตรวจล่าสุด)</span></label>
+        <label><input type="radio" name="per" value="custom">
+          <span><b>กำหนดเอง</b> ตั้งแต่ <input type="date" id="pStart"> ถึง <input type="date" id="pEnd"></span></label>
+        <p class="sub" id="pHint"></p>
+      </div>
+    </section>
+
     <section class="card gobar">
       <div>
-        <h2>2. สร้าง Dashboard</h2>
+        <h2>3. สร้าง Dashboard</h2>
         <p class="sub" id="goHint">เลือกไฟล์อย่างน้อย 1 ไฟล์ และระบุกลุ่มอายุให้ครบทุกไฟล์</p>
       </div>
       <button class="btn go" id="go" disabled>สร้าง Dashboard</button>
@@ -262,12 +286,26 @@ details.help li{margin:4px 0}
       <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
       ประมวลผลในเครื่องนี้ ไม่มีการส่งข้อมูลออก
     </span>
+    <button id="perBtn" title="เปลี่ยนช่วงเวลาของการตรวจฟันที่ใช้คำนวณ">ช่วงเวลา ▾</button>
     <span class="sp"></span>
     <span id="vinfo"></span>
     <button id="dqBtn" title="รายการที่ตรวจฟันในปีงบประมาณแต่ไม่ผ่านเงื่อนไขผู้ตรวจหรือจำนวนฟัน">ตรวจสอบคุณภาพข้อมูล</button>
     <button class="pri" id="save" title="บันทึกเป็นไฟล์ .html เปิดดูหรือส่งต่อได้ มีแต่ตัวเลขสรุป ไม่มีข้อมูลรายบุคคล">บันทึกรายงานเป็นไฟล์</button>
   </div>
   <iframe id="frame" title="Dashboard"></iframe>
+  <div id="perPop" class="hidden">
+    <b>ช่วงเวลาของการตรวจฟันที่ใช้คำนวณ</b>
+    <div class="period">
+      <label><input type="radio" name="per2" value="auto" checked><span>ปีงบประมาณล่าสุดในข้อมูล (อัตโนมัติ)</span></label>
+      <label><input type="radio" name="per2" value="custom"><span>กำหนดเอง ตั้งแต่ <input type="date" id="p2Start"> ถึง <input type="date" id="p2End"></span></label>
+    </div>
+    <p class="sub" id="p2Hint"></p>
+    <div id="p2Msg"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+      <button class="btn ghost" id="p2Cancel">ปิด</button>
+      <button class="btn" id="p2Apply">คำนวณใหม่</button>
+    </div>
+  </div>
 </div>
 
 <!-- หน้าตรวจสอบคุณภาพข้อมูล: มีข้อมูลระบุตัวบุคคล อยู่ในหน่วยความจำเท่านั้น -->
@@ -282,7 +320,7 @@ details.help li{margin:4px 0}
     <div class="msg warn" style="margin-top:0"><b>มีชื่อ-สกุลและเลขบัตรประชาชน</b>
       ใช้เพื่อตรวจสอบและแก้ไขข้อมูลในระบบของหน่วยบริการเท่านั้น ห้ามเผยแพร่หรือส่งต่อในกลุ่มสาธารณะ ·
       ข้อมูลหน้านี้อยู่ในหน่วยความจำชั่วคราว ไม่อยู่ในรายงานที่บันทึก และหายเมื่อปิดหน้าเว็บ</div>
-    <p class="sub" style="margin:12px 0 6px">รายการที่<b>ตรวจฟันในปีงบประมาณ</b>แล้ว แต่ไม่ถูกนับเพราะไม่ผ่านเกณฑ์คุณภาพ:
+    <p class="sub" style="margin:12px 0 6px">รายการที่<b>ตรวจฟันในช่วงเวลาที่คำนวณ</b>แล้ว แต่ไม่ถูกนับเพราะไม่ผ่านเกณฑ์คุณภาพ:
       ผู้ตรวจต้องเป็นทันตบุคลากร (providertype 02 ทันตแพทย์ หรือ 06 ทันตาภิบาล) และจำนวนฟันต้องอยู่ในพิสัยตามกลุ่มอายุ</p>
     <table class="dqsum" id="dqSum"></table>
     <div class="dqfil">
